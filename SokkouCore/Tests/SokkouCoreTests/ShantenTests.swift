@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import SaisokuCore
+@testable import SokkouCore
 
 /// シャンテン計算はこのアプリの土台。ここが狂うと採点も表示も全部意味を失う。
 /// 表を引く実装は速いぶん読みにくいので、**素朴な実装を別に書いて突き合わせる。**

@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import SaisokuCore
+@testable import SokkouCore
 
 /// 称号は「打った量」の記録なので、一度出した段位が後から下がってはいけない。
 /// 記録の読み書きも、項目を足したときに消えないことを確かめる。
