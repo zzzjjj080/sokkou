@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import SokkouCore
 
 /// 牌の絵柄。Web版で作ったSVGの座標をそのまま移してある。
@@ -60,6 +61,21 @@ enum TileFace {
     static let dark = Color(red: 0.149, green: 0.204, blue: 0.302)   // #26344d
     static let red = Color(red: 0.659, green: 0.196, blue: 0.165)    // #a8322a
     static let manRed = Color(red: 0.557, green: 0.165, blue: 0.145) // #8e2a25
+    static let cream = Color(red: 1, green: 0.996, blue: 0.973)
+
+    /// 萬子の書体。書道寄りの明朝を優先し、無ければ順に落とす。
+    /// 端末に入っている名前は機種とOSで変わるので、実物を見て決めない。
+    static let manFontName: String? = [
+        "ToppanBunkyuMidashiMincho-ExtraBold",
+        "YuKyokasho-Bold",
+        "HiraMinProN-W6",
+        "HiraginoSans-W7",
+    ].first { UIFont(name: $0, size: 12) != nil }
+
+    static func manFont(size: CGFloat) -> Font {
+        if let name = manFontName { return .custom(name, size: size) }
+        return .system(size: size, weight: .black, design: .serif)
+    }
 }
 
 /// 牌1枚。絵柄と地色だけを描く。枠や点数は外側で足す。
@@ -70,7 +86,7 @@ struct TileView: View {
             let scale = geo.size.width / TileFace.unit.width
             ZStack {
                 RoundedRectangle(cornerRadius: 6 * scale)
-                    .fill(LinearGradient(colors: [Color(red: 1, green: 0.996, blue: 0.973),
+                    .fill(LinearGradient(colors: [TileFace.cream,
                                                   Color(red: 0.957, green: 0.933, blue: 0.855)],
                                          startPoint: .top, endPoint: .bottom))
                     .overlay(RoundedRectangle(cornerRadius: 6 * scale)
@@ -91,24 +107,38 @@ struct TileView: View {
     }
 }
 
-/// 萬子は漢数字と「萬」の2段
+/// 萬子は漢数字と「萬」の2段。実物に寄せて太めの明朝で組む。
 private struct ManFace: View {
     let number: Int
     let scale: CGFloat
     var body: some View {
-        VStack(spacing: 0) {
+        VStack(spacing: -2 * scale) {
             Text(TileFace.kanji[number])
-                .font(.system(size: 30 * scale, weight: .bold, design: .serif))
+                .font(TileFace.manFont(size: 31 * scale))
                 .foregroundStyle(TileFace.dark)
             Text("萬")
-                .font(.system(size: 24 * scale, weight: .bold, design: .serif))
+                .font(TileFace.manFont(size: 27 * scale))
                 .foregroundStyle(TileFace.manRed)
         }
         .minimumScaleFactor(0.5)
     }
 }
 
-/// 筒子は輪の集まり
+/// 筒子。実物と同じく中を塗った同心円にする。
+/// 外の輪 → 白 → 中心の点、の3層。
+private struct PinDot: View {
+    let radius: CGFloat
+    let color: Color
+    var body: some View {
+        ZStack {
+            Circle().fill(color)
+            Circle().fill(TileFace.cream).frame(width: radius * 1.12, height: radius * 1.12)
+            Circle().fill(color).frame(width: radius * 0.5, height: radius * 0.5)
+        }
+        .frame(width: radius * 2, height: radius * 2)
+    }
+}
+
 private struct PinFace: View {
     let number: Int
     let scale: CGFloat
@@ -119,19 +149,36 @@ private struct PinFace: View {
         ZStack(alignment: .topLeading) {
             Color.clear
             ForEach(Array(positions.enumerated()), id: \.offset) { index, point in
-                let color = reds.contains(index) ? TileFace.red : TileFace.dark
-                Circle()
-                    .stroke(color, lineWidth: max(1, radius * 0.34))
-                    .frame(width: radius * 1.6, height: radius * 1.6)
+                PinDot(radius: number == 1 ? radius * 1.15 : radius,
+                       color: reds.contains(index) ? TileFace.red : TileFace.dark)
                     .position(x: point.x * scale, y: point.y * scale)
             }
-            if number == 1 {
-                // 1筒だけ中心に点を置く
-                Circle().fill(TileFace.red)
-                    .frame(width: radius * 0.55, height: radius * 0.55)
-                    .position(x: 30 * scale, y: 40 * scale)
-            }
         }
+    }
+}
+
+/// 索子の竹1本。節を入れて、上下の端を少し膨らませる。
+private struct BambooStick: View {
+    let height: CGFloat
+    let color: Color
+    var body: some View {
+        let width = max(3, height * 0.38)
+        ZStack {
+            Capsule().fill(color).frame(width: width, height: height)
+            // 節。竹らしさはここで出る
+            VStack(spacing: height * 0.26) {
+                Capsule().fill(TileFace.cream).frame(width: width * 0.92, height: max(1, height * 0.075))
+                Capsule().fill(TileFace.cream).frame(width: width * 0.92, height: max(1, height * 0.075))
+            }
+            // 端の膨らみ
+            VStack {
+                Capsule().fill(color).frame(width: width * 1.28, height: height * 0.13)
+                Spacer()
+                Capsule().fill(color).frame(width: width * 1.28, height: height * 0.13)
+            }
+            .frame(height: height)
+        }
+        .frame(width: width * 1.3, height: height)
     }
 }
 
@@ -141,7 +188,7 @@ private struct SouFace: View {
     let scale: CGFloat
     var body: some View {
         if number == 1 {
-            BirdFace(scale: scale)
+            PhoenixFace(scale: scale)
         } else {
             let positions = TileFace.souPositions[number] ?? []
             let height = (TileFace.souHeight[number] ?? 20) * scale
@@ -150,10 +197,8 @@ private struct SouFace: View {
             ZStack(alignment: .topLeading) {
                 Color.clear
                 ForEach(Array(positions.enumerated()), id: \.offset) { index, point in
-                    let color = reds.contains(index) ? TileFace.red : TileFace.dark
-                    Capsule()
-                        .fill(color)
-                        .frame(width: max(2, height * 0.34), height: height)
+                    BambooStick(height: height,
+                                color: reds.contains(index) ? TileFace.red : TileFace.dark)
                         .rotationEffect(.degrees(index < angles.count ? angles[index] : 0))
                         .position(x: point.x * scale, y: point.y * scale)
                 }
@@ -162,24 +207,131 @@ private struct SouFace: View {
     }
 }
 
-/// 1索の鳥。細部まで似せず、輪郭が鳥に見えれば足りる。
-private struct BirdFace: View {
+/// 1索の鳳凰。実物の一索は孔雀・鳳凰の意匠なので、
+/// 尾羽が扇のように広がり、冠羽と翼がはっきり分かる形にする。
+private struct PhoenixFace: View {
     let scale: CGFloat
+
+    private let ink = TileFace.dark
+    private let accent = TileFace.red
+
     var body: some View {
         ZStack(alignment: .topLeading) {
             Color.clear
-            Ellipse().fill(TileFace.dark)
-                .frame(width: 26 * scale, height: 30 * scale)
-                .position(x: 30 * scale, y: 34 * scale)
-            Circle().fill(Color(red: 1, green: 0.996, blue: 0.973))
-                .frame(width: 5 * scale, height: 5 * scale)
-                .position(x: 30 * scale, y: 26 * scale)
-            Capsule().fill(TileFace.red)
-                .frame(width: 4 * scale, height: 14 * scale)
-                .position(x: 25 * scale, y: 58 * scale)
-            Capsule().fill(TileFace.red)
-                .frame(width: 4 * scale, height: 14 * scale)
-                .position(x: 35 * scale, y: 58 * scale)
+
+            // 尾羽。下へ扇状に5枚広げる。これがあると鳳凰に見える
+            ForEach(0..<5, id: \.self) { i in
+                let t = Double(i) - 2                       // -2...2
+                TailFeather()
+                    .fill(i % 2 == 1 ? accent : ink)
+                    .frame(width: 5.5 * scale, height: (30 - abs(t) * 5) * scale)
+                    .rotationEffect(.degrees(t * 21), anchor: .top)
+                    .position(x: 31 * scale, y: 46 * scale)
+            }
+
+            // 胴。頭から胸、腹へ流れる
+            BodyShape()
+                .fill(ink)
+                .frame(width: 27 * scale, height: 32 * scale)
+                .position(x: 28 * scale, y: 30 * scale)
+
+            // 翼。地色で抜いて羽の重なりを出す
+            WingShape()
+                .fill(TileFace.cream)
+                .frame(width: 19 * scale, height: 15 * scale)
+                .position(x: 32 * scale, y: 33 * scale)
+            WingShape()
+                .stroke(ink, lineWidth: 1.1 * scale)
+                .frame(width: 19 * scale, height: 15 * scale)
+                .position(x: 32 * scale, y: 33 * scale)
+
+            // 冠羽。頭の上に3本
+            ForEach(0..<3, id: \.self) { i in
+                Capsule()
+                    .fill(accent)
+                    .frame(width: 2.2 * scale, height: (10 - Double(i) * 1.6) * scale)
+                    .rotationEffect(.degrees(-46 + Double(i) * 17), anchor: .bottom)
+                    .position(x: (21 + Double(i) * 2.6) * scale, y: 11.5 * scale)
+            }
+
+            // くちばしと目
+            BeakShape().fill(accent)
+                .frame(width: 8 * scale, height: 6 * scale)
+                .position(x: 14.5 * scale, y: 21 * scale)
+            Circle().fill(TileFace.cream)
+                .frame(width: 3.2 * scale, height: 3.2 * scale)
+                .position(x: 22 * scale, y: 19.5 * scale)
+            Circle().fill(ink)
+                .frame(width: 1.4 * scale, height: 1.4 * scale)
+                .position(x: 22 * scale, y: 19.5 * scale)
+
+            // 脚
+            Capsule().fill(accent)
+                .frame(width: 1.8 * scale, height: 7 * scale)
+                .rotationEffect(.degrees(-12))
+                .position(x: 26 * scale, y: 46 * scale)
+        }
+    }
+
+    /// 頭・胸・腹がひと続きになった胴
+    private struct BodyShape: Shape {
+        func path(in r: CGRect) -> Path {
+            var p = Path()
+            let w = r.width, h = r.height
+            p.move(to: CGPoint(x: w * 0.26, y: h * 0.10))            // 頭の上
+            p.addQuadCurve(to: CGPoint(x: w * 0.62, y: h * 0.30),     // 首の後ろ
+                           control: CGPoint(x: w * 0.58, y: h * 0.06))
+            p.addQuadCurve(to: CGPoint(x: w * 0.86, y: h * 0.72),     // 背
+                           control: CGPoint(x: w * 0.92, y: h * 0.44))
+            p.addQuadCurve(to: CGPoint(x: w * 0.40, y: h * 0.98),     // 尾のつけ根
+                           control: CGPoint(x: w * 0.72, y: h * 0.96))
+            p.addQuadCurve(to: CGPoint(x: w * 0.14, y: h * 0.44),     // 腹
+                           control: CGPoint(x: w * 0.10, y: h * 0.78))
+            p.addQuadCurve(to: CGPoint(x: w * 0.26, y: h * 0.10),     // 喉
+                           control: CGPoint(x: w * 0.06, y: h * 0.16))
+            p.closeSubpath()
+            return p
+        }
+    }
+
+    /// 胴に重ねる翼
+    private struct WingShape: Shape {
+        func path(in r: CGRect) -> Path {
+            var p = Path()
+            let w = r.width, h = r.height
+            p.move(to: CGPoint(x: w * 0.06, y: h * 0.22))
+            p.addQuadCurve(to: CGPoint(x: w * 0.98, y: h * 0.66),
+                           control: CGPoint(x: w * 0.66, y: h * 0.02))
+            p.addQuadCurve(to: CGPoint(x: w * 0.06, y: h * 0.22),
+                           control: CGPoint(x: w * 0.42, y: h * 0.92))
+            p.closeSubpath()
+            return p
+        }
+    }
+
+    /// 1枚の尾羽。先を細くする
+    private struct TailFeather: Shape {
+        func path(in r: CGRect) -> Path {
+            var p = Path()
+            let w = r.width, h = r.height
+            p.move(to: CGPoint(x: w * 0.5, y: 0))
+            p.addQuadCurve(to: CGPoint(x: w * 0.5, y: h),
+                           control: CGPoint(x: w * 1.35, y: h * 0.62))
+            p.addQuadCurve(to: CGPoint(x: w * 0.5, y: 0),
+                           control: CGPoint(x: w * -0.35, y: h * 0.62))
+            p.closeSubpath()
+            return p
+        }
+    }
+
+    private struct BeakShape: Shape {
+        func path(in r: CGRect) -> Path {
+            var p = Path()
+            p.move(to: CGPoint(x: r.width, y: r.height * 0.10))
+            p.addLine(to: CGPoint(x: 0, y: r.height * 0.5))
+            p.addLine(to: CGPoint(x: r.width, y: r.height * 0.92))
+            p.closeSubpath()
+            return p
         }
     }
 }
