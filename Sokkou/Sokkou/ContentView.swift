@@ -48,7 +48,21 @@ struct ContentView: View {
                 }
             }
             Spacer()
-            stat("最速聴牌", "\(game.records.fastestCount)")
+            // 累計は称号が上がる唯一の条件なので、一番大きく出す
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text("最速聴牌")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(.secondary)
+                Text("\(game.records.fastestCount)")
+                    .font(.system(size: 42, weight: .black))
+                    .monospacedDigit()
+                    .foregroundStyle(Color(red: 1, green: 0.835, blue: 0.290))
+                Text("回")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 14).padding(.vertical, 4)
+            .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 10))
             stat("連続", "\(game.records.currentStreak)")
             stat("最高連続", "\(game.records.bestStreak)")
             Spacer()

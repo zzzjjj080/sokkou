@@ -46,8 +46,8 @@ enum TileFace {
             .init(x: 16, y: 55), .init(x: 30, y: 55), .init(x: 44, y: 55)],
         7: [.init(x: 30, y: 17), .init(x: 16, y: 41), .init(x: 30, y: 41), .init(x: 44, y: 41),
             .init(x: 16, y: 62), .init(x: 30, y: 62), .init(x: 44, y: 62)],
-        8: [.init(x: 14, y: 25), .init(x: 24, y: 25), .init(x: 36, y: 25), .init(x: 46, y: 25),
-            .init(x: 14, y: 56), .init(x: 24, y: 56), .init(x: 36, y: 56), .init(x: 46, y: 56)],
+        8: [.init(x: 13, y: 25), .init(x: 24, y: 25), .init(x: 35, y: 25), .init(x: 46, y: 25),
+            .init(x: 13, y: 56), .init(x: 24, y: 56), .init(x: 35, y: 56), .init(x: 46, y: 56)],
         9: [.init(x: 16, y: 20), .init(x: 30, y: 20), .init(x: 44, y: 20),
             .init(x: 16, y: 40), .init(x: 30, y: 40), .init(x: 44, y: 40),
             .init(x: 16, y: 60), .init(x: 30, y: 60), .init(x: 44, y: 60)],
@@ -55,8 +55,10 @@ enum TileFace {
     static let souHeight: [Int: CGFloat] = [2: 26, 3: 22, 4: 24, 5: 21, 6: 21, 7: 18, 8: 20, 9: 17]
     /// 赤が入るのは5索(中央)・7索(上)・9索(真ん中の列)
     static let souRed: [Int: Set<Int>] = [5: [2], 7: [0], 9: [3, 4, 5]]
-    /// 8索は上段が「M」、下段が「W」に見える配置（実物の意匠）
-    static let souAngle: [Int: [Double]] = [8: [22, -22, 22, -22, -22, 22, -22, 22]]
+    /// 8索は上段が「M」、下段が「W」に見える配置（実物の意匠）。
+    /// 間隔11・高さ20なので、隣り合う竹の先が合うのは asin(11/20) ≒ 33度。
+    /// 角度が浅いと先が離れて、Mではなくただの傾いた棒の列に見える。
+    static let souAngle: [Int: [Double]] = [8: [33, -33, 33, -33, -33, 33, -33, 33]]
 
     static let dark = Color(red: 0.149, green: 0.204, blue: 0.302)   // #26344d
     static let red = Color(red: 0.659, green: 0.196, blue: 0.165)    // #a8322a
@@ -165,11 +167,7 @@ private struct BambooStick: View {
         let width = max(3, height * 0.38)
         ZStack {
             Capsule().fill(color).frame(width: width, height: height)
-            // 節。竹らしさはここで出る
-            VStack(spacing: height * 0.26) {
-                Capsule().fill(TileFace.cream).frame(width: width * 0.92, height: max(1, height * 0.075))
-                Capsule().fill(TileFace.cream).frame(width: width * 0.92, height: max(1, height * 0.075))
-            }
+            // 横縞(節)は入れない。小さく並ぶと縞模様に見えて汚れのようになるため
             // 端の膨らみ
             VStack {
                 Capsule().fill(color).frame(width: width * 1.28, height: height * 0.13)
