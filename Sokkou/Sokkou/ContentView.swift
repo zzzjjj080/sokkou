@@ -5,6 +5,7 @@ import SokkouCore
 struct ContentView: View {
     @Bindable var game: GameModel
     @State private var showsDetail = false
+    @State private var showsSettings = false
 
     private let background = Color(red: 0.106, green: 0.122, blue: 0.141)
     private let panel = Color(red: 0.149, green: 0.169, blue: 0.200)
@@ -21,6 +22,12 @@ struct ContentView: View {
             .padding(.horizontal, 18)
             .padding(.vertical, 10)
         }
+        .sheet(isPresented: $showsDetail) {
+            if let evaluation = game.evaluation, let chosen = game.chosen {
+                DetailSheet(evaluation: evaluation, chosen: chosen)
+            }
+        }
+        .sheet(isPresented: $showsSettings) { SettingsSheet(game: game) }
     }
 
     // MARK: - 上段（段位と記録）
@@ -47,6 +54,10 @@ struct ContentView: View {
             Text("\(game.turn)巡目")
                 .font(.system(size: 13, weight: .bold))
                 .foregroundStyle(Color(red: 1, green: 0.835, blue: 0.290))
+            Button { showsSettings = true } label: {
+                Image(systemName: "gearshape.fill").font(.system(size: 15))
+            }
+            .buttonStyle(.plain).foregroundStyle(.secondary)
         }
     }
 
@@ -138,6 +149,10 @@ struct ContentView: View {
 
             Button(actionLabel) { game.advance() }
                 .buttonStyle(.borderedProminent)
+                .disabled(game.phase == .choosing)
+
+            Button("詳細") { showsDetail = true }
+                .buttonStyle(.bordered)
                 .disabled(game.phase == .choosing)
 
             Button("やり直す") { game.restart() }
