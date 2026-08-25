@@ -4,7 +4,9 @@
 set -euo pipefail
 cd "$(dirname "$0")/Sokkou"
 
-LINE=$(xcrun devicectl list devices | grep -m1 " connected " || true)
+# Apple Watch も " connected " に一致してしまうので、iPhone に絞る。
+# ペアリング済みのWatchは "connected (no DDI)" と出るため、それも除く。
+LINE=$(xcrun devicectl list devices | grep '(iPhone' | grep ' connected ' | grep -v 'no DDI' | head -1 || true)
 if [ -z "$LINE" ]; then
   echo "繋がっているiPhoneが見つかりません。USBで接続してください。"
   exit 1
