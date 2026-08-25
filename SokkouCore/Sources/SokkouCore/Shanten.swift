@@ -99,8 +99,12 @@ public final class ShantenCalculator {
     }
 
     /// シャンテン数。0で聴牌、-1で和了形。
-    public func shanten(_ hand: TileCounts) -> Int {
-        var counts = hand.counts
+    public func shanten(_ hand: TileCounts) -> Int { shanten(counts: hand.counts) }
+
+    /// 種類ごとの枚数を直に受け取る版。探索の内側から呼ばれるのでこちらが本体。
+    /// TileCounts を組み立て直すと、1回あたりの確保と検査で桁違いに遅くなる。
+    public func shanten(counts input: [Int]) -> Int {
+        var counts = input
         var best = 8 - bestScore(counts)
         // 雀頭を1つ決め打ちする分岐も見る
         for i in 0..<Tile.kindCount where counts[i] >= 2 {
