@@ -31,15 +31,14 @@ public struct Records: Equatable, Sendable, Codable {
     public var progress: RankProgress { RankLadder.progress(forExperience: experience) }
 
     /// 1局終わったときに呼ぶ。戻り値は「この局で起きたこと」。
-    /// - Parameter mistakes: 聴牌までに外した打牌の回数
     @discardableResult
-    public mutating func finishRound(mistakes: Int) -> RoundOutcome {
+    public mutating func finishRound(score: RoundScore) -> RoundOutcome {
         let before = experience
         let rankBefore = rank
-        let gained = Experience.gain(mistakes: mistakes)
+        let gained = Experience.gain(score)
         experience += gained
 
-        let wasFastest = mistakes == 0
+        let wasFastest = score.mistakes == 0
         if wasFastest {
             fastestCount += 1
             currentStreak += 1
@@ -50,8 +49,10 @@ public struct Records: Equatable, Sendable, Codable {
 
         return RoundOutcome(
             wasFastest: wasFastest,
-            mistakes: mistakes,
+            score: score,
             gained: gained,
+            base: Experience.base(mistakes: score.mistakes),
+            multiplier: Experience.multiplier(score),
             experienceBefore: before,
             experienceAfter: experience,
             promotedTo: rankBefore != rank ? rank : nil,
@@ -85,9 +86,13 @@ public struct Records: Equatable, Sendable, Codable {
 /// 1局が終わったときに画面へ伝えること
 public struct RoundOutcome: Equatable, Sendable {
     public let wasFastest: Bool
-    public let mistakes: Int
+    public let score: RoundScore
     /// この局でもらった経験値
     public let gained: Int
+    /// 倍率をかける前の点数
+    public let base: Int
+    /// 金枠の割合から決まった倍率
+    public let multiplier: Double
     public let experienceBefore: Int
     public let experienceAfter: Int
     /// この局で昇格したなら、その段位

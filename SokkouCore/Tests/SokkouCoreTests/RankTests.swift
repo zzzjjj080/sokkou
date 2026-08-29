@@ -72,8 +72,8 @@ struct RankTests {
     @Test("ノーミスの局は100経験値、回数と連続も伸びる")
     func fastestRoundsAccumulate() {
         var r = Records()
-        r.finishRound(mistakes: 0)
-        r.finishRound(mistakes: 0)
+        r.finishRound(score: RoundScore(discards: 8, mistakes: 0, bestChoices: 0))
+        r.finishRound(score: RoundScore(discards: 8, mistakes: 0, bestChoices: 0))
         #expect(r.experience == 200)
         #expect(r.fastestCount == 2)
         #expect(r.currentStreak == 2)
@@ -83,8 +83,8 @@ struct RankTests {
     @Test("外しても経験値は入るが、連続は切れる")
     func missBreaksOnlyTheStreak() {
         var r = Records()
-        for _ in 0..<3 { r.finishRound(mistakes: 0) }
-        let outcome = r.finishRound(mistakes: 1)
+        for _ in 0..<3 { r.finishRound(score: RoundScore(discards: 8, mistakes: 0, bestChoices: 0)) }
+        let outcome = r.finishRound(score: RoundScore(discards: 8, mistakes: 1, bestChoices: 0))
         #expect(outcome.gained == 50, "1回外したら半分")
         #expect(r.experience == 350)
         #expect(r.fastestCount == 3, "最速聴牌の回数は増えない")
@@ -95,12 +95,12 @@ struct RankTests {
     @Test("昇格した局だけ昇格を知らせる")
     func promotionIsReportedOnce() {
         var r = Records()
-        let first = r.finishRound(mistakes: 0)     // 100経験値で見習い雀士 Lv1
+        let first = r.finishRound(score: RoundScore(discards: 8, mistakes: 0, bestChoices: 0))     // 100経験値で見習い雀士 Lv1
         #expect(first.promotedTo?.display == "見習い雀士 Lv1")
         #expect(first.gained == 100)
-        let second = r.finishRound(mistakes: 0)    // 200でLv2
+        let second = r.finishRound(score: RoundScore(discards: 8, mistakes: 0, bestChoices: 0))    // 200でLv2
         #expect(second.promotedTo?.display == "見習い雀士 Lv2")
-        let third = r.finishRound(mistakes: 3)     // 12しか入らないので昇格しない
+        let third = r.finishRound(score: RoundScore(discards: 8, mistakes: 3, bestChoices: 0))     // 12しか入らないので昇格しない
         #expect(third.gained == 12)
         #expect(third.promotedTo == nil, "半端な経験値では上がらない")
     }
@@ -108,7 +108,7 @@ struct RankTests {
     @Test("大きく外した局では段位に届かない")
     func missDoesNotPromote() {
         var r = Records()
-        let outcome = r.finishRound(mistakes: 5)
+        let outcome = r.finishRound(score: RoundScore(discards: 8, mistakes: 5, bestChoices: 0))
         #expect(outcome.gained == 3)
         #expect(outcome.promotedTo == nil)
         #expect(outcome.wasFastest == false)
@@ -138,7 +138,9 @@ struct RankTests {
     @Test("書いて読んで同じになる")
     func roundTrips() throws {
         var r = Records()
-        for i in 0..<10 { r.finishRound(mistakes: i % 3) }
+        for i in 0..<10 {
+            r.finishRound(score: RoundScore(discards: 8, mistakes: i % 3, bestChoices: i % 4))
+        }
         let data = try JSONEncoder().encode(r)
         #expect(try JSONDecoder().decode(Records.self, from: data) == r)
     }
@@ -210,27 +212,27 @@ struct ExperienceTests {
 
     @Test("ノーミスは100、外すたびに半分")
     func halvesPerMistake() {
-        #expect(Experience.gain(mistakes: 0) == 100)
-        #expect(Experience.gain(mistakes: 1) == 50)
-        #expect(Experience.gain(mistakes: 2) == 25)
-        #expect(Experience.gain(mistakes: 3) == 12)
-        #expect(Experience.gain(mistakes: 4) == 6)
-        #expect(Experience.gain(mistakes: 5) == 3)
+        #expect(Experience.base(mistakes: 0) == 100)
+        #expect(Experience.base(mistakes: 1) == 50)
+        #expect(Experience.base(mistakes: 2) == 25)
+        #expect(Experience.base(mistakes: 3) == 12)
+        #expect(Experience.base(mistakes: 4) == 6)
+        #expect(Experience.base(mistakes: 5) == 3)
     }
 
     @Test("どれだけ外しても最低1はもらえる")
     func neverZero() {
         for mistakes in 0...40 {
-            #expect(Experience.gain(mistakes: mistakes) >= 1, "\(mistakes)回外して0になった")
+            #expect(Experience.base(mistakes: mistakes) >= 1, "\(mistakes)回外して0になった")
         }
-        #expect(Experience.gain(mistakes: 6) == 1)
-        #expect(Experience.gain(mistakes: 20) == 1)
+        #expect(Experience.base(mistakes: 6) == 1)
+        #expect(Experience.base(mistakes: 20) == 1)
     }
 
     @Test("外すほど減る。増えることはない")
     func neverIncreases() {
         for mistakes in 1...30 {
-            #expect(Experience.gain(mistakes: mistakes) <= Experience.gain(mistakes: mistakes - 1))
+            #expect(Experience.base(mistakes: mistakes) <= Experience.base(mistakes: mistakes - 1))
         }
     }
 
@@ -239,8 +241,8 @@ struct ExperienceTests {
         var perfect = Records()
         var sloppy = Records()
         for _ in 0..<10 {
-            perfect.finishRound(mistakes: 0)
-            sloppy.finishRound(mistakes: 1)
+            perfect.finishRound(score: RoundScore(discards: 8, mistakes: 0, bestChoices: 0))
+            sloppy.finishRound(score: RoundScore(discards: 8, mistakes: 1, bestChoices: 0))
         }
         #expect(perfect.experience == 1000)
         #expect(sloppy.experience == 500)
@@ -344,5 +346,65 @@ struct TitleListTests {
                 #expect((0...entry.levelCount).contains(entry.reachedLevels))
             }
         }
+    }
+}
+
+/// 金枠を選べた割合で経験値に倍率がかかる。
+/// 枚数ではなく割合にしているのは、枚数だと打牌数の多い局ほど得になり、
+/// 遅く聴牌したほうが経験値が増えてしまうため。
+struct BonusTests {
+
+    @Test("全部金枠なら1.5倍、金枠ゼロなら等倍")
+    func multiplierRange() {
+        let all = RoundScore(discards: 8, mistakes: 0, bestChoices: 8)
+        let none = RoundScore(discards: 8, mistakes: 0, bestChoices: 0)
+        #expect(Experience.multiplier(all) == 1.5)
+        #expect(Experience.multiplier(none) == 1.0)
+        #expect(Experience.gain(all) == 150)
+        #expect(Experience.gain(none) == 100)
+    }
+
+    @Test("倍率は打牌数に左右されない")
+    func independentOfRoundLength() {
+        let short = RoundScore(discards: 6, mistakes: 0, bestChoices: 3)
+        let long = RoundScore(discards: 14, mistakes: 0, bestChoices: 7)
+        #expect(Experience.gain(short) == Experience.gain(long),
+                "同じ割合なら、巡目が多くても少なくても同じ")
+        #expect(Experience.gain(short) == 125)
+    }
+
+    @Test("ミスのほうが倍率より重い")
+    func mistakesOutweighPrecision() {
+        let sloppyButPrecise = RoundScore(discards: 8, mistakes: 1, bestChoices: 8)
+        let cleanButLoose = RoundScore(discards: 8, mistakes: 0, bestChoices: 0)
+        #expect(Experience.gain(sloppyButPrecise) == 75)
+        #expect(Experience.gain(cleanButLoose) == 100)
+        #expect(Experience.gain(sloppyButPrecise) < Experience.gain(cleanButLoose),
+                "1ミスで全部金枠でも、ノーミスで全部緑には届かない")
+    }
+
+    @Test("金枠が増えれば経験値も増える")
+    func moreBestIsMore() {
+        var previous = 0
+        for best in 0...8 {
+            let gain = Experience.gain(RoundScore(discards: 8, mistakes: 0, bestChoices: best))
+            #expect(gain >= previous)
+            previous = gain
+        }
+    }
+
+    @Test("どれだけ外しても0にはならない")
+    func neverZero() {
+        for mistakes in 0...30 {
+            let score = RoundScore(discards: 12, mistakes: mistakes, bestChoices: 0)
+            #expect(Experience.gain(score) >= 1)
+        }
+    }
+
+    @Test("局の内訳から合格数が出る")
+    func derivesCorrectCount() {
+        let score = RoundScore(discards: 10, mistakes: 3, bestChoices: 5)
+        #expect(score.correctChoices == 7)
+        #expect(abs(score.bestRate - 0.5) < 1e-9)
     }
 }

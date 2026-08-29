@@ -108,8 +108,8 @@ struct RoundResultView: View {
                 }
             }
             Text(round.mistakes == 0
-                 ? "すべて90点以上"
-                 : "外した打牌 \(round.mistakes)回")
+                 ? "すべて90点以上　うち最善 \(round.bestChoices)"
+                 : "外した打牌 \(round.mistakes)回　最善 \(round.bestChoices)")
                 .font(.system(size: 13))
                 .foregroundStyle(round.mistakes == 0 ? green : .secondary)
         }
@@ -119,7 +119,7 @@ struct RoundResultView: View {
 
     private var rankMeter: some View {
         VStack(alignment: .leading, spacing: 9) {
-            // この局でいくら入ったか
+            // この局でいくら入ったか。倍率は一目で分かるようにする
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text("獲得経験値")
                     .font(.system(size: 14, weight: .bold))
@@ -127,9 +127,30 @@ struct RoundResultView: View {
                 Text("+\(outcome?.gained ?? 0)")
                     .font(.system(size: 40, weight: .black)).monospacedDigit()
                     .foregroundStyle(Color(red: 0.55, green: 1, blue: 0.65))
+                if let outcome {
+                    Text("\(outcome.base) × \(multiplierText(outcome.multiplier))")
+                        .font(.system(size: 14, weight: .bold)).monospacedDigit()
+                        .foregroundStyle(.secondary)
+                }
+            }
+            // 内訳。倍率がどこから来たかを添える
+            HStack(spacing: 10) {
                 Text(gainReason)
                     .font(.system(size: 13))
                     .foregroundStyle(.secondary)
+                if let outcome, outcome.multiplier > 1 {
+                    Text("最善 \(outcome.score.bestChoices)/\(outcome.score.discards)"
+                         + "  ボーナス ×\(multiplierText(outcome.multiplier))")
+                        .font(.system(size: 13, weight: .heavy))
+                        .foregroundStyle(gold)
+                        .padding(.horizontal, 8).padding(.vertical, 2)
+                        .background(gold.opacity(0.15), in: Capsule())
+                } else if let outcome {
+                    Text("最善 \(outcome.score.bestChoices)/\(outcome.score.discards)"
+                         + "  ボーナスなし")
+                        .font(.system(size: 13))
+                        .foregroundStyle(.secondary)
+                }
             }
 
             ExperienceBar(from: outcome?.experienceBefore ?? records.experience,
@@ -152,10 +173,18 @@ struct RoundResultView: View {
     /// 何点入ったのかの理由。半分ずつ減ることが伝わるようにする
     private var gainReason: String {
         switch round.mistakes {
-        case 0: "ノーミス（満点）"
+        case 0: "ノーミス（基準100）"
         case 1: "1回外して半分"
         default: "\(round.mistakes)回外した"
         }
+    }
+
+    /// 1.5 や 1.38 のように、末尾の0を出さずに書く
+    private func multiplierText(_ value: Double) -> String {
+        let rounded = (value * 100).rounded() / 100
+        return rounded == rounded.rounded()
+            ? String(format: "%.1f", rounded)
+            : String(format: "%.2f", rounded)
     }
 
     // MARK: - 待ち

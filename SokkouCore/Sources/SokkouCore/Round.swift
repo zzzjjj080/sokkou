@@ -11,6 +11,10 @@ public struct Round {
     public private(set) var turn: Int
     /// この局で最善を外した回数
     public private(set) var mistakes: Int
+    /// 最善そのもの(金枠)を選んだ回数
+    public private(set) var bestChoices: Int
+    /// この局に切った枚数
+    public private(set) var discards: Int
     /// テンパイして局が終わったか
     public private(set) var isFinished: Bool
     /// 終わったときの待ち
@@ -23,6 +27,11 @@ public struct Round {
 
     /// ミスなくテンパイしたか
     public var wasFastest: Bool { isFinished && mistakes == 0 }
+
+    /// 経験値の計算に渡す内訳
+    public var score: RoundScore {
+        RoundScore(discards: discards, mistakes: mistakes, bestChoices: bestChoices)
+    }
 
     /// まだ見えていない牌の総数。ツモれる確率の分母に使う
     public var unseenTotal: Int { wall.reduce(0, +) }
@@ -57,6 +66,8 @@ public struct Round {
         wall = remaining
         turn = 0
         mistakes = 0
+        bestChoices = 0
+        discards = 0
         isFinished = false
         waits = []
         drawn = nil
@@ -132,14 +143,19 @@ public struct Round {
 
     /// 1枚切る。切ったあとテンパイなら局が終わる。
     /// `isCorrect` は採点結果を呼び出し側から渡す（Coreの中で二重に採点しないため）。
-    public mutating func discard(_ tile: Tile, isCorrect: Bool,
+    /// - Parameters:
+    ///   - isCorrect: 合格点(90点)に届いたか
+    ///   - isBest: 最善そのもの(金枠)だったか
+    public mutating func discard(_ tile: Tile, isCorrect: Bool, isBest: Bool = false,
                                  shantenCalculator: ShantenCalculator,
                                  waitsIfTenpai: [UkeireTile]) {
         precondition(!isFinished, "終わった局では切れない")
         guard var fourteen else { preconditionFailure("ツモ牌がない") }
         precondition(fourteen[tile] > 0, "持っていない牌は切れない")
 
+        discards += 1
         if !isCorrect { mistakes += 1 }
+        if isBest { bestChoices += 1 }
         fourteen.remove(tile)
         hand = fourteen
         drawn = nil

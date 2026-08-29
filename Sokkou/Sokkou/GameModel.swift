@@ -168,7 +168,7 @@ final class GameModel {
         let reachesTenpai = shantenCalculator.shanten(after) <= 0
         let waits = reachesTenpai ? (evaluation.option(for: tile)?.ukeire ?? []) : []
 
-        round.discard(tile, isCorrect: isCorrect,
+        round.discard(tile, isCorrect: isCorrect, isBest: evaluation.isBest(tile),
                       shantenCalculator: shantenCalculator, waitsIfTenpai: waits)
 
         if let option = evaluation.option(for: tile), option.isShantenBack {
@@ -188,7 +188,7 @@ final class GameModel {
 
     private func finishRound() {
         phase = .finished
-        let outcome = records.finishRound(mistakes: round.mistakes)
+        let outcome = records.finishRound(score: round.score)
         lastOutcome = outcome
         save()
         if outcome.promotedTo != nil {
