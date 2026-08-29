@@ -61,7 +61,8 @@ final class GameModel {
         }
 
         var generator = SystemRandomNumberGenerator()
-        round = Round(shantenCalculator: calculator, rng: &generator)
+        round = Round(shantenCalculator: calculator, rng: &generator,
+                      shantenRange: GameModel.dealRange)
         rng = generator
         Haptics.isEnabled = hapticsEnabled
         drawTile()
@@ -196,10 +197,21 @@ final class GameModel {
         startNewRound()
     }
 
+    /// 配牌のシャンテン範囲。通常は3〜4向聴。
+    /// 動作確認のときだけ、環境変数で聴牌までを短くできる。
+    /// **DEBUGビルドでしか読まないので、配布版では必ず3〜4向聴になる。**
+    static var dealRange: ClosedRange<Int> {
+        #if DEBUG
+        if ProcessInfo.processInfo.environment["SOKKOU_QUICK_TENPAI"] == "1" { return 1...1 }
+        #endif
+        return Round.dealtShantenRange
+    }
+
     private func startNewRound() {
         lastOutcome = nil
         frozenSlots = nil
-        round = Round(shantenCalculator: shantenCalculator, rng: &rng)
+        round = Round(shantenCalculator: shantenCalculator, rng: &rng,
+                      shantenRange: GameModel.dealRange)
         drawTile()
     }
 

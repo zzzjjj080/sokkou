@@ -23,6 +23,8 @@ public struct Records: Equatable, Sendable, Codable {
 
     public var rank: Rank? { RankLadder.rank(forFastestCount: fastestCount) }
     public var nextRank: (rank: Rank, remaining: Int)? { RankLadder.next(forFastestCount: fastestCount) }
+    /// 経験値メーターに出す進み具合
+    public var progress: RankProgress { RankLadder.progress(forFastestCount: fastestCount) }
 
     /// 1局終わったときに呼ぶ。戻り値は「この局で起きたこと」。
     @discardableResult

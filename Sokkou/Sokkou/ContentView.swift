@@ -13,12 +13,23 @@ struct ContentView: View {
     var body: some View {
         ZStack {
             background.ignoresSafeArea()
-            VStack(spacing: 0) {
-                header
-                Spacer(minLength: 4)
-                handRow            // 上下に Spacer を置いて画面の中央に来るようにする
-                Spacer(minLength: 4)
-                bottomRow
+            Group {
+                if game.phase == .finished {
+                    // 局が終わったら画面ごと差し替える。手牌が並んだままだと
+                    // ツモを続けているのと見分けがつかない
+                    RoundResultView(round: game.round,
+                                    records: game.records,
+                                    outcome: game.lastOutcome,
+                                    onNext: { game.advance() })
+                } else {
+                    VStack(spacing: 0) {
+                        header
+                        Spacer(minLength: 4)
+                        handRow    // 上下に Spacer を置いて画面の中央に来るようにする
+                        Spacer(minLength: 4)
+                        bottomRow
+                    }
+                }
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 12)

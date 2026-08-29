@@ -51,4 +51,44 @@ public enum RankLadder {
     }
 
     public static var top: Rank { all[all.count - 1] }
+
+    /// 次の段位までの進み具合。経験値メーターに使う。
+    public static func progress(forFastestCount count: Int) -> RankProgress {
+        let current = rank(forFastestCount: count)
+        let upcoming = next(forFastestCount: count)
+        // いまの段位に入った回数。まだ称号が無いうちは0から数える
+        let floor = current?.requirement ?? 0
+        let ceiling = upcoming?.rank.requirement
+        return RankProgress(
+            current: current,
+            next: upcoming?.rank,
+            earned: count - floor,
+            needed: ceiling.map { $0 - floor } ?? 0,
+            total: count
+        )
+    }
+}
+
+/// 段位の進み具合
+public struct RankProgress: Equatable, Sendable {
+    public let current: Rank?
+    public let next: Rank?
+    /// いまの段位に入ってから稼いだ回数
+    public let earned: Int
+    /// 次の段位までに必要な回数。最高位なら0
+    public let needed: Int
+    /// 累計回数
+    public let total: Int
+
+    /// メーターの埋まり具合。最高位に達していれば満タン
+    public var fraction: Double {
+        guard needed > 0 else { return 1 }
+        return min(1, max(0, Double(earned) / Double(needed)))
+    }
+    /// 次の段位まであと何回か。最高位なら nil
+    public var remaining: Int? {
+        guard needed > 0 else { return nil }
+        return needed - earned
+    }
+    public var isMaxed: Bool { next == nil }
 }

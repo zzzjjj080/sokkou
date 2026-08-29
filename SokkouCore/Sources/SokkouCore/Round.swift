@@ -27,12 +27,18 @@ public struct Round {
     /// 配牌は3〜4向聴のものだけを使う。近すぎても遠すぎても練習にならない。
     public static let dealtShantenRange = 3...4
 
-    public init<G: RandomNumberGenerator>(shantenCalculator: ShantenCalculator, rng: inout G) {
+    /// - Parameter shantenRange: 配牌に使うシャンテン数の範囲。
+    ///   既定は3〜4向聴。動作確認で聴牌までを短くしたいときだけ狭める。
+    public init<G: RandomNumberGenerator>(
+        shantenCalculator: ShantenCalculator,
+        rng: inout G,
+        shantenRange: ClosedRange<Int> = Round.dealtShantenRange
+    ) {
         var dealt: TileCounts?
         for _ in 0..<400 {
             let candidate = Round.dealThirteen(rng: &rng)
             let sh = shantenCalculator.shanten(candidate)
-            if Round.dealtShantenRange.contains(sh) { dealt = candidate; break }
+            if shantenRange.contains(sh) { dealt = candidate; break }
         }
         // 400回引いて当たらないことはまずないが、その場合は最後の1つを使う
         // 初期化の途中で self を触るとクロージャが self を捕まえるので、

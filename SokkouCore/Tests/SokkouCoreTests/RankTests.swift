@@ -142,3 +142,57 @@ struct RankTests {
         #expect(r.bestStreak == 7)
     }
 }
+
+/// 経験値メーター。段位の中でどこまで進んだかを出す。
+struct RankProgressTests {
+
+    @Test("称号が無いうちは最初の段位までを数える")
+    func beforeFirstRank() {
+        let p = RankLadder.progress(forFastestCount: 0)
+        #expect(p.current == nil)
+        #expect(p.next?.display == "見習い雀士 Lv1")
+        #expect(p.earned == 0)
+        #expect(p.needed == 1)
+        #expect(p.remaining == 1)
+        #expect(p.fraction == 0)
+    }
+
+    @Test("段位に入った直後は空、次の直前で満タンに近づく")
+    func fillsWithinTheRank() {
+        // 早見え雀士 Lv1 = 30回、Lv2 = 33回。3回で1段
+        let justPromoted = RankLadder.progress(forFastestCount: 30)
+        #expect(justPromoted.current?.display == "早見え雀士 Lv1")
+        #expect(justPromoted.earned == 0)
+        #expect(justPromoted.needed == 3)
+        #expect(justPromoted.fraction == 0)
+
+        let almost = RankLadder.progress(forFastestCount: 32)
+        #expect(almost.current?.display == "早見え雀士 Lv1")
+        #expect(almost.earned == 2)
+        #expect(almost.remaining == 1)
+        #expect(abs(almost.fraction - 2.0 / 3.0) < 0.0001)
+    }
+
+    @Test("メーターは0から1の外へ出ない")
+    func fractionStaysInRange() {
+        for n in 0...11000 {
+            let f = RankLadder.progress(forFastestCount: n).fraction
+            #expect(f >= 0 && f <= 1, "累計\(n)回でメーターが範囲外(\(f))")
+        }
+    }
+
+    @Test("最高位ではメーターが満タンで、次が無い")
+    func maxedOut() {
+        let p = RankLadder.progress(forFastestCount: 10000)
+        #expect(p.isMaxed)
+        #expect(p.next == nil)
+        #expect(p.remaining == nil)
+        #expect(p.fraction == 1)
+        #expect(p.current == RankLadder.top)
+    }
+
+    @Test("累計はそのまま持っている")
+    func keepsTotal() {
+        #expect(RankLadder.progress(forFastestCount: 137).total == 137)
+    }
+}
