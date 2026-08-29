@@ -69,6 +69,27 @@ public enum RankLadder {
         }
     }
 
+    /// 称号ごとにまとめた一覧。
+    ///
+    /// 70段を全部並べるとスクロールが長すぎて、どこまで来たかが掴めない。
+    /// 称号は7つしかないので、そちらでまとめる。
+    public static func titleEntries(forExperience experience: Int) -> [TitleEntry] {
+        table.enumerated().map { index, entry in
+            let reachedLevels = entry.steps.filter { experience >= $0 }.count
+            let isReached = reachedLevels > 0
+            let isCompleted = reachedLevels == entry.steps.count
+            return TitleEntry(
+                index: index + 1,
+                title: entry.title,
+                levelCount: entry.steps.count,
+                reachedLevels: reachedLevels,
+                isCurrent: isReached && !isCompleted,
+                firstRequirement: entry.steps[0],
+                lastRequirement: entry.steps[entry.steps.count - 1]
+            )
+        }
+    }
+
     /// 次の段位までの進み具合。経験値メーターに使う。
     public static func progress(forExperience experience: Int) -> RankProgress {
         let current = rank(forExperience: experience)
@@ -125,4 +146,25 @@ public struct RankEntry: Equatable, Sendable, Identifiable {
     public var displayName: String {
         isReached ? rank.display : "??? Lv\(rank.level)"
     }
+}
+
+/// 称号ひとつぶんの一覧行
+public struct TitleEntry: Equatable, Sendable, Identifiable {
+    /// 1から数えた称号の順番
+    public let index: Int
+    public let title: String
+    public let levelCount: Int
+    /// この称号のうち、いくつのレベルに到達したか
+    public let reachedLevels: Int
+    /// いまこの称号の途中にいるか
+    public let isCurrent: Bool
+    public let firstRequirement: Int
+    public let lastRequirement: Int
+
+    public var id: Int { index }
+    public var isReached: Bool { reachedLevels > 0 }
+    public var isCompleted: Bool { reachedLevels == levelCount }
+
+    /// 画面に出す名前。まだ届いていない称号は伏せる
+    public var displayName: String { isReached ? title : "???" }
 }

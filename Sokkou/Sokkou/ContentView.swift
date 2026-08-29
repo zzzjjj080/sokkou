@@ -52,7 +52,8 @@ struct ContentView: View {
                 .foregroundStyle(Color(red: 1, green: 0.835, blue: 0.290))
                 .lineLimit(1)
             // 経験値メーター。段位が上がる条件はこれだけなので常に出しておく
-            ExperienceBar(progress: game.records.progress, showsTitle: false)
+            ExperienceBar(from: game.records.experience, to: game.records.experience,
+                          showsTitle: false)
                 .frame(maxWidth: 340)
             stat("連続", "\(game.records.currentStreak)")
             stat("最高連続", "\(game.records.bestStreak)")

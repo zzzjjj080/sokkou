@@ -293,3 +293,56 @@ struct RankListTests {
         #expect(entries[69].rank.requirement == 1_000_000)
     }
 }
+
+/// 称号ごとにまとめた一覧。70段を並べるとスクロールが長すぎるため。
+struct TitleListTests {
+
+    @Test("称号は7つ。順番は通しで振られる")
+    func listsEveryTitle() {
+        let entries = RankLadder.titleEntries(forExperience: 0)
+        #expect(entries.count == 7)
+        #expect(entries.map(\.index) == Array(1...7))
+        let allTen = entries.allSatisfy { $0.levelCount == 10 }
+        #expect(allTen)
+    }
+
+    @Test("届いていない称号は名前を伏せる")
+    func hidesUnreachedTitles() {
+        let entries = RankLadder.titleEntries(forExperience: 350)
+        #expect(entries[0].displayName == "見習い雀士")
+        #expect(entries[0].reachedLevels == 3)
+        #expect(entries[1].isReached == false)
+        #expect(entries[1].displayName == "???")
+    }
+
+    @Test("いま途中にいる称号はひとつだけ")
+    func exactlyOneCurrent() {
+        for experience in [0, 100, 350, 1000, 4200, 999_999, 1_000_000] {
+            let current = RankLadder.titleEntries(forExperience: experience).filter(\.isCurrent)
+            #expect(current.count <= 1, "経験値\(experience)で現在地が複数ある")
+        }
+        // Lv10まで終えた直後は、その称号は完了で、次の称号はまだ未到達
+        let justFinished = RankLadder.titleEntries(forExperience: 1000)
+        #expect(justFinished[0].isCompleted)
+        #expect(justFinished[0].isCurrent == false)
+        #expect(justFinished[1].isReached == false)
+    }
+
+    @Test("最高位まで行くと全部が完了になる")
+    func allCompletedAtTop() {
+        let entries = RankLadder.titleEntries(forExperience: 1_000_000)
+        let everyoneCompleted = entries.allSatisfy(\.isCompleted)
+        let noneHidden = entries.allSatisfy { $0.displayName != "???" }
+        #expect(everyoneCompleted)
+        #expect(noneHidden)
+    }
+
+    @Test("到達したレベル数は0から10の間に収まる")
+    func reachedLevelsStayInRange() {
+        for experience in stride(from: 0, through: 1_010_000, by: 997) {
+            for entry in RankLadder.titleEntries(forExperience: experience) {
+                #expect((0...entry.levelCount).contains(entry.reachedLevels))
+            }
+        }
+    }
+}

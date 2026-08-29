@@ -21,6 +21,12 @@ struct RoundResultView: View {
     var body: some View {
         VStack(spacing: 0) {
             headline
+                .onAppear {
+                    guard outcome?.promotedTo != nil else { return }
+                    withAnimation(.spring(response: 0.45, dampingFraction: 0.55).delay(1.5)) {
+                        showsPromotion = true
+                    }
+                }
             Spacer(minLength: 8)
             HStack(alignment: .top, spacing: 22) {
                 roundScore
@@ -43,15 +49,22 @@ struct RoundResultView: View {
 
     // MARK: - 見出し
 
+    /// 昇格の見出しは、バーが伸びきってから出す
+    @State private var showsPromotion = false
+
     private var headline: some View {
         HStack(alignment: .firstTextBaseline, spacing: 14) {
             if let promoted = outcome?.promotedTo {
+                // 昇格は目立たせる。バーが伸びきってから出す
                 Text("🎊 昇格!")
                     .font(.system(size: 34, weight: .black))
                     .foregroundStyle(gold)
+                    .scaleEffect(showsPromotion ? 1 : 0.6)
+                    .opacity(showsPromotion ? 1 : 0)
                 Text(promoted.display)
                     .font(.system(size: 27, weight: .heavy))
                     .foregroundStyle(gold)
+                    .opacity(showsPromotion ? 1 : 0)
             } else if round.wasFastest {
                 Text("🎉 最速聴牌!")
                     .font(.system(size: 34, weight: .black))
@@ -119,8 +132,11 @@ struct RoundResultView: View {
                     .foregroundStyle(.secondary)
             }
 
-            ExperienceBar(progress: records.progress, gained: outcome?.gained,
-                          showsTitle: false, animates: true)
+            ExperienceBar(from: outcome?.experienceBefore ?? records.experience,
+                          to: records.experience,
+                          showsTitle: false,
+                          animates: true,
+                          onLevelUp: { Haptics.promoted() })
 
             HStack(spacing: 14) {
                 Label("連続 \(records.currentStreak)", systemImage: "flame.fill")

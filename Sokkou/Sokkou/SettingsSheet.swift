@@ -9,17 +9,7 @@ struct SettingsSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("練習") {
-                    Toggle("ヒント: 切る候補を5つに絞る", isOn: $game.showsHint)
-                }
                 Section {
-                    Toggle("振動する", isOn: $game.hapticsEnabled)
-                } header: {
-                    Text("手ごたえ")
-                } footer: {
-                    Text("牌を押したとき、判定が出たとき、昇格したときに強さを変えて振動します。")
-                }
-                Section("段位") {
                     NavigationLink {
                         RankListView(records: game.records)
                     } label: {
@@ -30,6 +20,16 @@ struct SettingsSheet: View {
                                 .foregroundStyle(.secondary)
                         }
                     }
+                }
+                Section("練習") {
+                    Toggle("ヒント: 切る候補を5つに絞る", isOn: $game.showsHint)
+                }
+                Section {
+                    Toggle("振動する", isOn: $game.hapticsEnabled)
+                } header: {
+                    Text("手ごたえ")
+                } footer: {
+                    Text("牌を押したとき、判定が出たとき、昇格したときに強さを変えて振動します。")
                 }
                 Section {
                     Button("記録をすべて消す", role: .destructive) {

@@ -1,37 +1,29 @@
 import SwiftUI
 import SokkouCore
 
-/// 段位の一覧。どこまで来たか、この先どれだけ残っているかを見る。
-/// 未到達の称号は名前を伏せてある。
+/// 段位一覧。称号ごとにまとめてある。
+/// 70段を全部並べるとスクロールが長すぎて、どこまで来たかが掴めないため。
+/// まだ届いていない称号は名前を伏せ、いくつ残っているかだけ分かるようにしてある。
 struct RankListView: View {
     let records: Records
 
     private let gold = Color(red: 1, green: 0.835, blue: 0.290)
+    private let green = Color(red: 0.42, green: 0.85, blue: 0.55)
 
-    private var entries: [RankEntry] { RankLadder.entries(forExperience: records.experience) }
-    private var reachedCount: Int { entries.filter(\.isReached).count }
+    private var entries: [TitleEntry] { RankLadder.titleEntries(forExperience: records.experience) }
 
     var body: some View {
         List {
             Section {
-                HStack {
-                    Text("到達した段位")
-                    Spacer()
-                    Text("\(reachedCount) / \(entries.count)")
-                        .font(.system(size: 17, weight: .heavy)).monospacedDigit()
-                        .foregroundStyle(gold)
-                }
-                HStack {
-                    Text("累計経験値")
-                    Spacer()
-                    Text("\(records.experience) EXP")
-                        .monospacedDigit().foregroundStyle(.secondary)
-                }
+                LabeledContent("いまの段位", value: records.rank?.display ?? "称号なし")
+                LabeledContent("累計経験値", value: "\(records.experience) EXP")
+                LabeledContent("到達した称号",
+                               value: "\(entries.filter(\.isReached).count) / \(entries.count)")
             } footer: {
-                Text("まだ到達していない称号は伏せてあります。必要な経験値は先まで見えます。")
+                Text("まだ届いていない称号は名前を伏せてあります。必要な経験値は先まで見えます。")
             }
 
-            Section("段位") {
+            Section("称号") {
                 ForEach(entries) { entry in
                     row(entry)
                 }
@@ -41,38 +33,48 @@ struct RankListView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 
-    private func row(_ entry: RankEntry) -> some View {
-        HStack(spacing: 10) {
-            Text("\(entry.step)")
-                .font(.system(size: 12, weight: .bold)).monospacedDigit()
-                .foregroundStyle(.secondary)
-                .frame(width: 26, alignment: .trailing)
-
-            Text(entry.displayName)
-                .font(.system(size: 16, weight: entry.isCurrent ? .heavy : .regular))
+    private func row(_ entry: TitleEntry) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon(entry))
+                .font(.system(size: 16))
                 .foregroundStyle(entry.isCurrent ? gold
-                                 : (entry.isReached ? .primary : .secondary))
+                                 : (entry.isCompleted ? green : Color.secondary.opacity(0.5)))
+                .frame(width: 22)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(entry.displayName)
+                    .font(.system(size: 17, weight: entry.isCurrent ? .heavy : .semibold))
+                    .foregroundStyle(entry.isCurrent ? gold
+                                     : (entry.isReached ? .primary : .secondary))
+                Text("\(entry.firstRequirement) 〜 \(entry.lastRequirement) EXP")
+                    .font(.system(size: 12)).monospacedDigit()
+                    .foregroundStyle(.secondary)
+            }
 
             Spacer()
 
-            Text("\(entry.rank.requirement) EXP")
-                .font(.system(size: 13)).monospacedDigit()
-                .foregroundStyle(.secondary)
-
             if entry.isCurrent {
-                Text("いまここ")
-                    .font(.system(size: 11, weight: .heavy))
-                    .foregroundStyle(Color(red: 0.14, green: 0.11, blue: 0.01))
-                    .padding(.horizontal, 7).padding(.vertical, 2)
-                    .background(gold, in: Capsule())
-            } else if entry.isReached {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(Color(red: 0.42, green: 0.85, blue: 0.55))
-            } else {
-                Image(systemName: "lock.fill")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.tertiary)
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("いまここ")
+                        .font(.system(size: 11, weight: .heavy))
+                        .foregroundStyle(Color(red: 0.14, green: 0.11, blue: 0.01))
+                        .padding(.horizontal, 7).padding(.vertical, 2)
+                        .background(gold, in: Capsule())
+                    Text("\(entry.reachedLevels) / \(entry.levelCount)")
+                        .font(.system(size: 12, weight: .bold)).monospacedDigit()
+                        .foregroundStyle(.secondary)
+                }
+            } else if entry.isCompleted {
+                Text("制覇")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(green)
             }
         }
+    }
+
+    private func icon(_ entry: TitleEntry) -> String {
+        if entry.isCurrent { return "figure.walk" }
+        if entry.isCompleted { return "checkmark.seal.fill" }
+        return "lock.fill"
     }
 }
