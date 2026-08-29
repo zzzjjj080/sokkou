@@ -19,6 +19,18 @@ struct SettingsSheet: View {
                 } footer: {
                     Text("牌を押したとき、判定が出たとき、昇格したときに強さを変えて振動します。")
                 }
+                Section("段位") {
+                    NavigationLink {
+                        RankListView(records: game.records)
+                    } label: {
+                        HStack {
+                            Text("段位一覧")
+                            Spacer()
+                            Text(game.records.rank?.display ?? "称号なし")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
                 Section {
                     Button("記録をすべて消す", role: .destructive) {
                         showsResetConfirmation = true

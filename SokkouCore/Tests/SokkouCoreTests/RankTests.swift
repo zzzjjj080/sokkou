@@ -248,3 +248,48 @@ struct ExperienceTests {
         #expect(sloppy.rank?.display == "見習い雀士 Lv5")
     }
 }
+
+/// 段位の一覧。未到達の称号は名前を伏せる。
+struct RankListTests {
+
+    @Test("70段すべてが並び、段数は1から通しで振られる")
+    func listsEveryStep() {
+        let entries = RankLadder.entries(forExperience: 0)
+        #expect(entries.count == 70)
+        #expect(entries.map(\.step) == Array(1...70))
+    }
+
+    @Test("到達済みだけ名前が見え、その先は伏せられる")
+    func hidesUnreachedTitles() {
+        let entries = RankLadder.entries(forExperience: 350)   // 見習い雀士 Lv3
+        #expect(entries[0].displayName == "見習い雀士 Lv1")
+        #expect(entries[2].displayName == "見習い雀士 Lv3")
+        #expect(entries[3].isReached == false)
+        #expect(entries[3].displayName == "??? Lv4", "先の称号は伏せる")
+        #expect(entries[69].displayName.hasPrefix("???"))
+    }
+
+    @Test("いまいる段はひとつだけ")
+    func exactlyOneCurrent() {
+        for experience in [0, 100, 350, 4200, 999_999, 1_000_000] {
+            let current = RankLadder.entries(forExperience: experience).filter(\.isCurrent)
+            #expect(current.count <= 1, "経験値\(experience)で現在地が複数ある")
+            if experience >= 100 { #expect(current.count == 1) }
+        }
+    }
+
+    @Test("到達済みの数は段位の位置と合う")
+    func reachedCountMatchesRank() {
+        let entries = RankLadder.entries(forExperience: 4200)
+        let reached = entries.filter(\.isReached)
+        #expect(reached.last?.rank == RankLadder.rank(forExperience: 4200))
+        #expect(reached.count == entries.firstIndex { !$0.isReached }!)
+    }
+
+    @Test("必要経験値は伏せない。あといくら要るかは見せる")
+    func requirementsAreAlwaysVisible() {
+        let entries = RankLadder.entries(forExperience: 0)
+        #expect(entries[0].rank.requirement == 100)
+        #expect(entries[69].rank.requirement == 1_000_000)
+    }
+}

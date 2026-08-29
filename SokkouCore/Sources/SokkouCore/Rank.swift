@@ -55,6 +55,20 @@ public enum RankLadder {
 
     public static var top: Rank { all[all.count - 1] }
 
+    /// 段位の一覧。到達済みかどうかを添えて返す。
+    ///
+    /// 未到達の称号は名前を伏せる。先に何があるかは楽しみに取っておき、
+    /// 「あと何段あるか」と「いくら必要か」だけ分かるようにするため。
+    public static func entries(forExperience experience: Int) -> [RankEntry] {
+        let currentIndex = all.lastIndex { experience >= $0.requirement }
+        return all.enumerated().map { index, rank in
+            RankEntry(step: index + 1,
+                      rank: rank,
+                      isReached: experience >= rank.requirement,
+                      isCurrent: index == currentIndex)
+        }
+    }
+
     /// 次の段位までの進み具合。経験値メーターに使う。
     public static func progress(forExperience experience: Int) -> RankProgress {
         let current = rank(forExperience: experience)
@@ -94,4 +108,21 @@ public struct RankProgress: Equatable, Sendable {
         return needed - earned
     }
     public var isMaxed: Bool { next == nil }
+}
+
+/// 一覧に出す1段ぶん
+public struct RankEntry: Equatable, Sendable, Identifiable {
+    /// 1から数えた段数
+    public let step: Int
+    public let rank: Rank
+    public let isReached: Bool
+    /// いま自分がいる段か
+    public let isCurrent: Bool
+
+    public var id: Int { step }
+
+    /// 画面に出す名前。まだ到達していない称号は伏せる
+    public var displayName: String {
+        isReached ? rank.display : "??? Lv\(rank.level)"
+    }
 }

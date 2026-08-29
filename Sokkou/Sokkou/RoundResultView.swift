@@ -162,9 +162,8 @@ struct RoundResultView: View {
                     .font(.system(size: 13, weight: .bold))
                     .foregroundStyle(.secondary)
             }
-            // ここから何巡目までにツモれるか。区切りは巡目そのもので出す
-            let last = Round.maxDrawsPerHand
-            let points = DrawChance.turnCheckpoints(currentTurn: round.turn, lastTurn: last)
+            // ここからあと何巡でツモれるか。区切りは残りツモ回数で頭打ちにする
+            let points = DrawChance.checkpoints(remainingDraws: round.remainingDraws)
             if points.isEmpty {
                 Text("ツモ番はもう残っていません")
                     .font(.system(size: 12)).foregroundStyle(.secondary)
@@ -172,12 +171,13 @@ struct RoundResultView: View {
                 HStack(spacing: 14) {
                     Text("ツモれる確率")
                         .font(.system(size: 12)).foregroundStyle(.secondary)
-                    ForEach(points, id: \.self) { turn in
+                    ForEach(points, id: \.self) { draws in
                         let p = DrawChance.probability(waits: round.waitCount,
                                                        unseen: round.unseenTotal,
-                                                       draws: turn - round.turn)
+                                                       draws: draws)
                         HStack(alignment: .firstTextBaseline, spacing: 3) {
-                            Text(turn == last ? "ラスト(\(last)巡目)まで" : "\(turn)巡目まで")
+                            Text(draws == round.remainingDraws
+                                 ? "ラストまで(あと\(draws)巡)" : "あと\(draws)巡")
                                 .font(.system(size: 12))
                                 .foregroundStyle(.secondary)
                             Text("\(Int((p * 100).rounded()))%")
@@ -186,7 +186,7 @@ struct RoundResultView: View {
                         }
                     }
                 }
-                Text("1局\(last)ツモとして計算。他家は考えていないので実戦より高めに出ます")
+                Text("1局\(Round.maxDrawsPerHand)ツモとして計算。他家は考えていないので実戦より高めに出ます")
                     .font(.system(size: 10))
                     .foregroundStyle(.secondary)
             }

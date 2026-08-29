@@ -32,23 +32,20 @@ public enum DrawChance {
         return 1 - miss
     }
 
-    /// 画面に出す区切りを「巡目」で返す。
+    /// 画面に出す区切り。「ここからあと何巡で」を返す。
     ///
-    /// 5巡目・10巡目・15巡目のうち、まだ先にあるものと、最後の巡目。
-    /// 「あと何巡」ではなく巡目そのもので示すのは、聴牌した時点から見て
-    /// どこまで持つ話なのかが直感的に分かるため。
+    /// 5巡・10巡のうち残りツモ回数に収まるものと、最後に残り全部。
+    /// 聴牌した巡目がいくつでも「ここから先」の話として読めるようにしている。
     ///
-    /// **以前は5巡・10巡・15巡を固定で出していた。** そのため10巡目に
-    /// 聴牌した局でも「15巡で55%」と、あと15回ツモれる前提の数字を出していた。
-    /// 実際にはその時点で残りは8回しかない。
+    /// **残り回数で頭打ちにするのが要点。** 以前は5・10・15を固定で出していたため、
+    /// 10巡目に聴牌した局でも「15巡で55%」と、あと15回ツモれる前提の
+    /// 数字を出していた。実際にはその時点で残りは8回しかない。
     ///
-    /// - Parameters:
-    ///   - currentTurn: 聴牌した巡目
-    ///   - lastTurn: その局で自分が最後にツモれる巡目
-    public static func turnCheckpoints(currentTurn: Int, lastTurn: Int) -> [Int] {
-        guard currentTurn < lastTurn else { return [] }
-        var turns = [5, 10, 15].filter { $0 > currentTurn && $0 < lastTurn }
-        turns.append(lastTurn)
-        return turns
+    /// - Parameter remainingDraws: この局であと何回ツモれるか
+    public static func checkpoints(remainingDraws: Int) -> [Int] {
+        guard remainingDraws > 0 else { return [] }
+        var points = [5, 10].filter { $0 < remainingDraws }
+        points.append(remainingDraws)
+        return points
     }
 }
