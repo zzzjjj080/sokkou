@@ -27,6 +27,9 @@ final class GameModel {
     private(set) var records: Records
     /// 直前の局で起きたこと（昇格したかなど）
     private(set) var lastOutcome: RoundOutcome?
+    /// 配牌や採点の最中。この間はボタンを押せなくする。
+    /// 押しても反応が無いと二度押しされ、2局ぶん進んでしまうため
+    private(set) var isBusy = false
 
     /// ヒント（切る候補をTOP5に絞る）
     var showsHint: Bool {
@@ -128,7 +131,8 @@ final class GameModel {
 
     /// 牌を1枚選ぶ
     func choose(_ tile: Tile) {
-        guard phase == .choosing, let evaluation, let fourteen = round.fourteen else { return }
+        guard !isBusy, phase == .choosing,
+              let evaluation, let fourteen = round.fourteen else { return }
         guard fourteen[tile] > 0 else { return }
 
         Haptics.tap()
@@ -167,7 +171,7 @@ final class GameModel {
 
     private func finishRound() {
         phase = .finished
-        let outcome = records.finishRound(wasFastest: round.wasFastest)
+        let outcome = records.finishRound(mistakes: round.mistakes)
         lastOutcome = outcome
         save()
         if outcome.promotedTo != nil {
@@ -181,20 +185,33 @@ final class GameModel {
 
     /// 「ツモる」か「次の局へ」
     func advance() {
+        guard !isBusy else { return }
         switch phase {
         case .choosing:
             break
         case .afterDiscard:
             Haptics.draw()
-            drawTile()
+            run { self.drawTile() }
         case .finished:
-            startNewRound()
+            run { self.startNewRound() }
         }
     }
 
     /// 今の局を捨てて配牌からやり直す。記録は減らさない。
     func restart() {
-        startNewRound()
+        guard !isBusy else { return }
+        run { self.startNewRound() }
+    }
+
+    /// 重い処理を、画面に「待っている」と出してから走らせる。
+    /// そのまま呼ぶと終わるまで再描画されず、固まったように見えて二度押しを招く。
+    private func run(_ work: @escaping () -> Void) {
+        isBusy = true
+        Task { @MainActor in
+            await Task.yield()      // ここで一度描かせてから重い処理へ入る
+            work()
+            isBusy = false
+        }
     }
 
     /// 配牌のシャンテン範囲。通常は3〜4向聴。

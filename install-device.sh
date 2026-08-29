@@ -14,10 +14,12 @@ fi
 DEV=$(echo "$LINE" | grep -oE '[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}')
 echo "対象: $DEV"
 
-xcodebuild -project Sokkou.xcodeproj -scheme Sokkou -configuration Debug \
+# リリース構成で入れる。デバッグ構成は最適化が効かず50倍遅く、
+# 採点のたびに固まって二度押しの原因になる(引き継ぎ書4-27)
+xcodebuild -project Sokkou.xcodeproj -scheme Sokkou -configuration Release \
   -destination "platform=iOS,id=$DEV" -derivedDataPath /tmp/sokkou-dev \
   -allowProvisioningUpdates build
 
-APP=$(find /tmp/sokkou-dev/Build/Products -name "Sokkou.app" -maxdepth 3 | head -1)
+APP=$(find /tmp/sokkou-dev/Build/Products -name "Sokkou.app" -path "*Release*" -maxdepth 3 | head -1)
 xcrun devicectl device install app --device "$DEV" "$APP"
 echo "入れ終わりました。ホーム画面から起動してください。"

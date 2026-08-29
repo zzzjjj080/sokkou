@@ -95,7 +95,7 @@ struct RoundResultView: View {
                 }
             }
             Text(round.mistakes == 0
-                 ? "すべて90点以上。最速で聴牌しました"
+                 ? "すべて90点以上"
                  : "外した打牌 \(round.mistakes)回")
                 .font(.system(size: 13))
                 .foregroundStyle(round.mistakes == 0 ? green : .secondary)
@@ -105,54 +105,40 @@ struct RoundResultView: View {
     // MARK: - 段位と経験値メーター
 
     private var rankMeter: some View {
-        let progress = records.progress
-        return VStack(alignment: .leading, spacing: 7) {
-            HStack(alignment: .firstTextBaseline, spacing: 10) {
-                Text(progress.current?.display ?? "称号なし")
-                    .font(.system(size: 22, weight: .heavy))
-                    .foregroundStyle(gold)
-                Spacer()
-                HStack(alignment: .firstTextBaseline, spacing: 3) {
-                    Text("累計")
-                        .font(.system(size: 12)).foregroundStyle(.secondary)
-                    Text("\(progress.total)")
-                        .font(.system(size: 26, weight: .black)).monospacedDigit()
-                        .foregroundStyle(gold)
-                    Text("回")
-                        .font(.system(size: 12)).foregroundStyle(.secondary)
-                }
-            }
-
-            // 経験値メーター
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    Capsule().fill(Color.white.opacity(0.12))
-                    Capsule()
-                        .fill(LinearGradient(colors: [gold.opacity(0.75), gold],
-                                             startPoint: .leading, endPoint: .trailing))
-                        .frame(width: max(6, geo.size.width * progress.fraction))
-                }
-            }
-            .frame(height: 16)
-
-            if let remaining = progress.remaining, let next = progress.next {
-                Text("あと \(remaining)回 で \(next.display)")
-                    .font(.system(size: 13, weight: .bold))
+        VStack(alignment: .leading, spacing: 9) {
+            // この局でいくら入ったか
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text("獲得経験値")
+                    .font(.system(size: 14, weight: .bold))
                     .foregroundStyle(.secondary)
-            } else {
-                Text("最高位に到達しています")
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(gold)
+                Text("+\(outcome?.gained ?? 0)")
+                    .font(.system(size: 40, weight: .black)).monospacedDigit()
+                    .foregroundStyle(Color(red: 0.55, green: 1, blue: 0.65))
+                Text(gainReason)
+                    .font(.system(size: 13))
+                    .foregroundStyle(.secondary)
             }
+
+            ExperienceBar(progress: records.progress, gained: outcome?.gained)
 
             HStack(spacing: 14) {
                 Label("連続 \(records.currentStreak)", systemImage: "flame.fill")
                 Label("最高 \(records.bestStreak)", systemImage: "trophy.fill")
+                Label("最速聴牌 \(records.fastestCount)回", systemImage: "bolt.fill")
             }
             .font(.system(size: 13))
             .foregroundStyle(.secondary)
         }
-        .frame(minWidth: 330)
+        .frame(minWidth: 360)
+    }
+
+    /// 何点入ったのかの理由。半分ずつ減ることが伝わるようにする
+    private var gainReason: String {
+        switch round.mistakes {
+        case 0: "ノーミス（満点）"
+        case 1: "1回外して半分"
+        default: "\(round.mistakes)回外した"
+        }
     }
 
     // MARK: - 待ち

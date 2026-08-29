@@ -58,25 +58,11 @@ struct ContentView: View {
                     Text("最高位").font(.system(size: 13)).foregroundStyle(.secondary)
                 }
             }
-            Spacer()
-            // 累計は称号が上がる唯一の条件なので、一番大きく出す
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text("最速聴牌")
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(.secondary)
-                Text("\(game.records.fastestCount)")
-                    .font(.system(size: 42, weight: .black))
-                    .monospacedDigit()
-                    .foregroundStyle(Color(red: 1, green: 0.835, blue: 0.290))
-                Text("回")
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(.secondary)
-            }
-            .padding(.horizontal, 14).padding(.vertical, 4)
-            .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 10))
+            // 経験値メーター。段位が上がる条件はこれだけなので常に出しておく
+            ExperienceBar(progress: game.records.progress, gained: nil)
+                .frame(maxWidth: 340)
             stat("連続", "\(game.records.currentStreak)")
             stat("最高連続", "\(game.records.bestStreak)")
-            Spacer()
             Text("\(game.turn)巡目")
                 .font(.system(size: 19, weight: .heavy))
                 .foregroundStyle(Color(red: 1, green: 0.835, blue: 0.290))
@@ -176,24 +162,26 @@ struct ContentView: View {
                 Button("詳細") { showsDetail = true }
                     .font(.system(size: 15, weight: .bold))
                     .buttonStyle(.bordered)
-                    .disabled(game.phase == .choosing)
+                    .disabled(game.phase == .choosing || game.isBusy)
                 Button("やり直す") { game.restart() }
                     .font(.system(size: 15, weight: .bold))
                     .buttonStyle(.bordered)
+                    .disabled(game.isBusy)
             }
 
             // ツモるは一番右に、一番大きく
             Button { game.advance() } label: {
-                Text(actionLabel)
-                    .font(.system(size: 26, weight: .heavy))
+                Text(game.isBusy ? "少々お待ちください" : actionLabel)
+                    .font(.system(size: game.isBusy ? 15 : 26, weight: .heavy))
                     .frame(width: 168, height: 74)
             }
             .buttonStyle(.borderedProminent)
-            .disabled(game.phase == .choosing)
+            .disabled(game.phase == .choosing || game.isBusy)
         }
     }
 
     private var verdictText: String {
+        if game.isBusy { return "少々お待ちください…" }
         guard game.phase != .choosing,
               let evaluation = game.evaluation, let chosen = game.chosen,
               let option = evaluation.option(for: chosen) else {

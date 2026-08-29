@@ -7,29 +7,32 @@ import Foundation
 public struct Rank: Equatable, Sendable, Codable {
     public let title: String
     public let level: Int
-    /// この段位に上がるのに必要だった累計回数
+    /// この段位に上がるのに必要な累計経験値
     public let requirement: Int
 
     public var display: String { "\(title) Lv\(level)" }
 }
 
 public enum RankLadder {
-    /// 称号ごとの、Lv1〜Lv10に必要な累計回数。
+    /// 称号ごとの、Lv1〜Lv10に必要な累計経験値。
+    /// 数字は「ノーミスで聴牌した回数」×100。ノーミス1局が100経験値なので、
+    /// 満点を取り続けたときの上がり方は回数で数えていた頃と変わらない。
+    /// 外すと半分以下しか入らないので、そのぶん遅くなる。
     ///
     /// 決めた条件は3つ。
     ///   ・7称号 × 10レベル = 70段
-    ///   ・61段目(神速雀士 Lv1)でちょうど1000回
-    ///   ・70段目(神速雀士 Lv10)でちょうど10000回
+    ///   ・61段目(神速雀士 Lv1)でちょうど100000(ノーミス1000局ぶん)
+    ///   ・70段目(神速雀士 Lv10)でちょうど1000000(ノーミス10000局ぶん)
     /// 称号ごとの担当範囲を先に置き、その中を等比で刻んで丸めてある。
-    /// 単純な等比だと序盤30段が1回刻みに潰れて、3称号が一瞬で終わってしまうため。
+    /// 単純な等比だと序盤30段が1局刻みに潰れて、3称号が一瞬で終わってしまうため。
     public static let table: [(title: String, steps: [Int])] = [
-        ("見習い雀士", [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]),
-        ("手なり雀士", [11, 12, 14, 15, 17, 18, 21, 23, 25, 28]),
-        ("早見え雀士", [30, 33, 37, 41, 45, 50, 55, 61, 68, 75]),
-        ("一直線雀士", [80, 88, 97, 110, 120, 130, 140, 160, 170, 190]),
-        ("速攻雀士",   [200, 220, 240, 270, 290, 320, 350, 390, 430, 470]),
-        ("疾風雀士",   [500, 540, 580, 620, 670, 710, 770, 820, 880, 950]),
-        ("神速雀士",   [1000, 1300, 1700, 2200, 2800, 3600, 4600, 6000, 7700, 10000]),
+        ("見習い雀士", [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]),
+        ("手なり雀士", [1100, 1200, 1400, 1500, 1700, 1800, 2100, 2300, 2500, 2800]),
+        ("早見え雀士", [3000, 3300, 3700, 4100, 4500, 5000, 5500, 6100, 6800, 7500]),
+        ("一直線雀士", [8000, 8800, 9700, 11000, 12000, 13000, 14000, 16000, 17000, 19000]),
+        ("速攻雀士",   [20000, 22000, 24000, 27000, 29000, 32000, 35000, 39000, 43000, 47000]),
+        ("疾風雀士",   [50000, 54000, 58000, 62000, 67000, 71000, 77000, 82000, 88000, 95000]),
+        ("神速雀士",   [100000, 130000, 170000, 220000, 280000, 360000, 460000, 600000, 770000, 1000000]),
     ]
 
     /// 表を「必要回数の昇順」に平らへ並べたもの
@@ -39,32 +42,32 @@ public enum RankLadder {
         }
     }
 
-    /// いまの段位。1回も最速聴牌していなければ nil。
-    public static func rank(forFastestCount count: Int) -> Rank? {
-        all.last { count >= $0.requirement }
+    /// いまの段位。経験値が最初の段位に届いていなければ nil。
+    public static func rank(forExperience experience: Int) -> Rank? {
+        all.last { experience >= $0.requirement }
     }
 
     /// 次の段位と、それまでの残り回数。最高位に達していれば nil。
-    public static func next(forFastestCount count: Int) -> (rank: Rank, remaining: Int)? {
-        guard let next = all.first(where: { count < $0.requirement }) else { return nil }
-        return (next, next.requirement - count)
+    public static func next(forExperience experience: Int) -> (rank: Rank, remaining: Int)? {
+        guard let next = all.first(where: { experience < $0.requirement }) else { return nil }
+        return (next, next.requirement - experience)
     }
 
     public static var top: Rank { all[all.count - 1] }
 
     /// 次の段位までの進み具合。経験値メーターに使う。
-    public static func progress(forFastestCount count: Int) -> RankProgress {
-        let current = rank(forFastestCount: count)
-        let upcoming = next(forFastestCount: count)
-        // いまの段位に入った回数。まだ称号が無いうちは0から数える
+    public static func progress(forExperience experience: Int) -> RankProgress {
+        let current = rank(forExperience: experience)
+        let upcoming = next(forExperience: experience)
+        // いまの段位に入った経験値。まだ称号が無いうちは0から数える
         let floor = current?.requirement ?? 0
         let ceiling = upcoming?.rank.requirement
         return RankProgress(
             current: current,
             next: upcoming?.rank,
-            earned: count - floor,
+            earned: experience - floor,
             needed: ceiling.map { $0 - floor } ?? 0,
-            total: count
+            total: experience
         )
     }
 }
@@ -73,11 +76,11 @@ public enum RankLadder {
 public struct RankProgress: Equatable, Sendable {
     public let current: Rank?
     public let next: Rank?
-    /// いまの段位に入ってから稼いだ回数
+    /// いまの段位に入ってから稼いだ経験値
     public let earned: Int
-    /// 次の段位までに必要な回数。最高位なら0
+    /// 次の段位までに必要な経験値。最高位なら0
     public let needed: Int
-    /// 累計回数
+    /// 累計経験値
     public let total: Int
 
     /// メーターの埋まり具合。最高位に達していれば満タン
@@ -85,7 +88,7 @@ public struct RankProgress: Equatable, Sendable {
         guard needed > 0 else { return 1 }
         return min(1, max(0, Double(earned) / Double(needed)))
     }
-    /// 次の段位まであと何回か。最高位なら nil
+    /// 次の段位まであと何経験値か。最高位なら nil
     public var remaining: Int? {
         guard needed > 0 else { return nil }
         return needed - earned
