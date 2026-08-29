@@ -172,22 +172,30 @@ struct DrawChanceTests {
 /// 10巡目に聴牌した局でも「15巡で55%」という起こりえない数字を出していた。
 struct DrawHorizonTests {
 
-    @Test("残り巡数を超える区切りは出さない")
+    @Test("区切りはすべて、聴牌した巡目より先で、最後の巡目まで")
     func checkpointsFitInsideTheHand() {
-        for remaining in 0...18 {
-            for point in DrawChance.checkpoints(remainingDraws: remaining) {
-                #expect(point <= remaining, "残り\(remaining)巡で\(point)巡を出した")
-                #expect(point > 0)
+        let last = Round.maxDrawsPerHand
+        for turn in 0...last {
+            let points = DrawChance.turnCheckpoints(currentTurn: turn, lastTurn: last)
+            for point in points {
+                #expect(point > turn, "\(turn)巡目に、もう過ぎた\(point)巡目を出した")
+                #expect(point <= last, "\(point)巡目は最後の\(last)巡目を超えている")
             }
+            #expect(points == points.sorted())
+            #expect(Set(points).count == points.count, "同じ巡目が2回出ている")
         }
     }
 
-    @Test("残りが少なければ区切りも減る")
-    func fewerCheckpointsNearTheEnd() {
-        #expect(DrawChance.checkpoints(remainingDraws: 0).isEmpty)
-        #expect(DrawChance.checkpoints(remainingDraws: 2) == [2])
-        #expect(DrawChance.checkpoints(remainingDraws: 5) == [3, 5])
-        #expect(DrawChance.checkpoints(remainingDraws: 12) == [3, 6, 12])
+    @Test("過ぎた区切りは出さず、最後は必ず入る")
+    func skipsPastCheckpoints() {
+        // 1巡目に聴牌なら5・10・15とラスト
+        #expect(DrawChance.turnCheckpoints(currentTurn: 1, lastTurn: 18) == [5, 10, 15, 18])
+        // 10巡目なら15とラストだけ
+        #expect(DrawChance.turnCheckpoints(currentTurn: 10, lastTurn: 18) == [15, 18])
+        // 16巡目ならラストだけ
+        #expect(DrawChance.turnCheckpoints(currentTurn: 16, lastTurn: 18) == [18])
+        // 最後の巡目に聴牌したらもう無い
+        #expect(DrawChance.turnCheckpoints(currentTurn: 18, lastTurn: 18).isEmpty)
     }
 
     @Test("巡目が進むほど残りは減る")
@@ -198,6 +206,14 @@ struct DrawHorizonTests {
         #expect(round.remainingDraws == Round.maxDrawsPerHand)
         round.draw(shantenCalculator: calc, rng: &rng)
         #expect(round.remainingDraws == Round.maxDrawsPerHand - 1)
+    }
+
+    @Test("10巡目に聴牌したら、ラストまでは8回ぶんで数える")
+    func drawsCountFromCurrentTurn() {
+        let last = Round.maxDrawsPerHand
+        let points = DrawChance.turnCheckpoints(currentTurn: 10, lastTurn: last)
+        #expect(points.last == 18)
+        #expect(points.last! - 10 == 8, "残りは8回")
     }
 
     @Test("残り8巡・待ち4枚なら3割ほど。15巡ぶんの数字より低い")

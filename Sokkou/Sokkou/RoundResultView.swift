@@ -162,19 +162,22 @@ struct RoundResultView: View {
                     .font(.system(size: 13, weight: .bold))
                     .foregroundStyle(.secondary)
             }
-            // ここから何巡でツモれるか。区切りは残りのツモ回数までしか出さない
-            let points = DrawChance.checkpoints(remainingDraws: round.remainingDraws)
+            // ここから何巡目までにツモれるか。区切りは巡目そのもので出す
+            let last = Round.maxDrawsPerHand
+            let points = DrawChance.turnCheckpoints(currentTurn: round.turn, lastTurn: last)
             if points.isEmpty {
                 Text("ツモ番はもう残っていません")
                     .font(.system(size: 12)).foregroundStyle(.secondary)
             } else {
                 HStack(spacing: 14) {
-                    ForEach(points, id: \.self) { turns in
+                    Text("ツモれる確率")
+                        .font(.system(size: 12)).foregroundStyle(.secondary)
+                    ForEach(points, id: \.self) { turn in
                         let p = DrawChance.probability(waits: round.waitCount,
                                                        unseen: round.unseenTotal,
-                                                       draws: turns)
+                                                       draws: turn - round.turn)
                         HStack(alignment: .firstTextBaseline, spacing: 3) {
-                            Text(turns == round.remainingDraws ? "残り\(turns)巡" : "あと\(turns)巡")
+                            Text(turn == last ? "ラスト(\(last)巡目)まで" : "\(turn)巡目まで")
                                 .font(.system(size: 12))
                                 .foregroundStyle(.secondary)
                             Text("\(Int((p * 100).rounded()))%")
@@ -182,11 +185,8 @@ struct RoundResultView: View {
                                 .foregroundStyle(.white)
                         }
                     }
-                    Text("でツモれる")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.secondary)
                 }
-                Text("1局18ツモとして計算。他家は考えていないので実戦より高めに出ます")
+                Text("1局\(last)ツモとして計算。他家は考えていないので実戦より高めに出ます")
                     .font(.system(size: 10))
                     .foregroundStyle(.secondary)
             }
