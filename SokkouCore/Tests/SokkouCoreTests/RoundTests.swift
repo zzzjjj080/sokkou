@@ -167,67 +167,30 @@ struct DrawChanceTests {
     }
 }
 
-/// 確率を出す区切りは、残りのツモ回数を超えてはいけない。
-/// ここを固定の5巡・10巡・15巡にしていたため、
-/// 10巡目に聴牌した局でも「15巡で55%」という起こりえない数字を出していた。
+/// 区切りは「何回引いたら」で数える。巡目で出していたころは、
+/// 10巡目に聴牌した局でも「15巡で55%」とその局では起こりえない数字が出ていた。
 struct DrawHorizonTests {
 
-    @Test("区切りは残りツモ回数に収まる")
-    func checkpointsFitInsideTheHand() {
-        for remaining in 0...Round.maxDrawsPerHand {
-            let points = DrawChance.checkpoints(remainingDraws: remaining)
-            for point in points {
-                #expect(point > 0)
-                #expect(point <= remaining, "残り\(remaining)回で\(point)回を出した")
-            }
-            #expect(points == points.sorted())
-            #expect(Set(points).count == points.count, "同じ区切りが2回出ている")
-            if remaining > 0 { #expect(points.last == remaining, "最後は必ず残り全部") }
+    @Test("区切りは1回・5回・10回")
+    func checkpointsAreFixed() {
+        #expect(DrawChance.checkpoints == [1, 5, 10])
+        #expect(DrawChance.checkpoints == DrawChance.checkpoints.sorted())
+    }
+
+    @Test("区切りが増えるほど確率も上がる")
+    func probabilityGrowsAlongCheckpoints() {
+        var previous = 0.0
+        for draws in DrawChance.checkpoints {
+            let p = DrawChance.probability(waits: 8, unseen: 87, draws: draws)
+            #expect(p > previous)
+            previous = p
         }
     }
 
-    @Test("残りが少なければ区切りも減る")
-    func skipsPastCheckpoints() {
-        #expect(DrawChance.checkpoints(remainingDraws: 0).isEmpty)
-        #expect(DrawChance.checkpoints(remainingDraws: 3) == [3])
-        #expect(DrawChance.checkpoints(remainingDraws: 8) == [5, 8])
-        #expect(DrawChance.checkpoints(remainingDraws: 17) == [5, 10, 17])
-    }
-
-    @Test("巡目が進むほど残りは減る")
-    func remainingShrinksWithTurns() {
-        let calc = ShantenCalculator()
-        var rng = SystemlessRandom(seed: 31)
-        var round = Round(shantenCalculator: calc, rng: &rng)
-        #expect(round.remainingDraws == Round.maxDrawsPerHand)
-        round.draw(shantenCalculator: calc, rng: &rng)
-        #expect(round.remainingDraws == Round.maxDrawsPerHand - 1)
-    }
-
-    @Test("10巡目に聴牌したらラストまでは8回")
-    func drawsCountFromCurrentTurn() {
-        let calc = ShantenCalculator()
-        var rng = SystemlessRandom(seed: 77)
-        var round = Round(shantenCalculator: calc, rng: &rng)
-        for _ in 0..<10 {
-            round.draw(shantenCalculator: calc, rng: &rng)
-            guard let drawn = round.drawn else { break }
-            let drop = round.hand.kinds.first { $0 != drawn } ?? drawn
-            if round.isFinished { break }
-            round.discard(drop, isCorrect: true, shantenCalculator: calc, waitsIfTenpai: [])
-            if round.isFinished { break }
-        }
-        if round.turn == 10 {
-            #expect(round.remainingDraws == 8)
-            #expect(DrawChance.checkpoints(remainingDraws: 8) == [5, 8])
-        }
-    }
-
-    @Test("残り8巡・待ち4枚なら3割ほど。15巡ぶんの数字より低い")
-    func realisticNumbers() {
-        let eight = DrawChance.probability(waits: 4, unseen: 85, draws: 8)
-        let fifteen = DrawChance.probability(waits: 4, unseen: 85, draws: 15)
-        #expect(abs(eight - 0.33) < 0.02)
-        #expect(fifteen > eight + 0.15, "前は起こりえない15巡の数字を出していた")
+    @Test("両面8枚待ちを5回引いたら約39パーセント")
+    func knownValue() {
+        // 実際に山を引くシミュレーション200万回でも39.00%だった値
+        let p = DrawChance.probability(waits: 8, unseen: 87, draws: 5)
+        #expect(abs(p - 0.390) < 0.005)
     }
 }

@@ -178,36 +178,29 @@ struct RoundResultView: View {
                     .font(.system(size: 13, weight: .bold))
                     .foregroundStyle(.secondary)
             }
-            // ここからあと何巡でツモれるか。区切りは残りツモ回数で頭打ちにする
-            let points = DrawChance.checkpoints(remainingDraws: round.remainingDraws)
-            if points.isEmpty {
-                Text("ツモ番はもう残っていません")
+            // 何回引いたらツモれるか。巡目ではなく引いた回数で示す
+            HStack(spacing: 16) {
+                Text("ツモれる確率")
                     .font(.system(size: 12)).foregroundStyle(.secondary)
-            } else {
-                HStack(spacing: 14) {
-                    Text("ツモれる確率")
-                        .font(.system(size: 12)).foregroundStyle(.secondary)
-                    ForEach(points, id: \.self) { draws in
-                        let p = DrawChance.probability(waits: round.waitCount,
-                                                       unseen: round.unseenTotal,
-                                                       draws: draws)
-                        HStack(alignment: .firstTextBaseline, spacing: 3) {
-                            Text(draws == round.remainingDraws
-                                 ? "ラストまで(あと\(draws)巡)" : "あと\(draws)巡")
-                                .font(.system(size: 12))
-                                .foregroundStyle(.secondary)
-                            Text("\(Int((p * 100).rounded()))%")
-                                .font(.system(size: 17, weight: .heavy)).monospacedDigit()
-                                .foregroundStyle(.white)
-                        }
+                ForEach(DrawChance.checkpoints, id: \.self) { draws in
+                    let p = DrawChance.probability(waits: round.waitCount,
+                                                   unseen: round.unseenTotal,
+                                                   draws: draws)
+                    HStack(alignment: .firstTextBaseline, spacing: 3) {
+                        Text(draws == 1 ? "1回で" : "\(draws)回以内")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.secondary)
+                        Text("\(Int((p * 100).rounded()))%")
+                            .font(.system(size: 17, weight: .heavy)).monospacedDigit()
+                            .foregroundStyle(.white)
                     }
                 }
-                Text("「あと何回かツモれたら」の確率です。実戦では他家が先に和了るので"
-                     + "ここまでツモ番が回らないことが多く、実際の自摸和了率はこれより低くなります")
-                    .font(.system(size: 10))
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
             }
+            Text("山から続けて引いたらの確率です。実戦では他家が先に和了るので、"
+                 + "ここまでツモ番が回らないことが多くなります")
+                .font(.system(size: 10))
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }
