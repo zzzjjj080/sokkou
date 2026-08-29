@@ -29,6 +29,8 @@ struct RankListView: View {
                 }
             }
         }
+        .frame(maxWidth: 640)
+        .frame(maxWidth: .infinity)
         .navigationTitle("段位一覧")
         .navigationBarTitleDisplayMode(.inline)
     }

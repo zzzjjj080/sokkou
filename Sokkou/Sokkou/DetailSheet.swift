@@ -26,6 +26,8 @@ struct DetailSheet: View {
                     table
                 }
                 .padding(18)
+                .frame(maxWidth: 760)
+                .frame(maxWidth: .infinity)
             }
             .navigationTitle("採点の内訳")
             .navigationBarTitleDisplayMode(.inline)

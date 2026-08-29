@@ -8,6 +8,7 @@ struct SettingsSheet: View {
 
     var body: some View {
         NavigationStack {
+            // 横画面だと画面幅いっぱいに広がって行が間延びするので、中央に寄せて絞る
             Form {
                 Section {
                     NavigationLink {
@@ -48,6 +49,8 @@ struct SettingsSheet: View {
                         .font(.system(size: 12)).foregroundStyle(.secondary)
                 }
             }
+            .frame(maxWidth: 640)
+            .frame(maxWidth: .infinity)
             .navigationTitle("設定")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

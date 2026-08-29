@@ -202,9 +202,11 @@ struct RoundResultView: View {
                         }
                     }
                 }
-                Text("1局\(Round.maxDrawsPerHand)ツモとして計算。他家は考えていないので実戦より高めに出ます")
+                Text("「あと何回かツモれたら」の確率です。実戦では他家が先に和了るので"
+                     + "ここまでツモ番が回らないことが多く、実際の自摸和了率はこれより低くなります")
                     .font(.system(size: 10))
                     .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
     }
