@@ -119,7 +119,8 @@ struct RoundResultView: View {
                     .foregroundStyle(.secondary)
             }
 
-            ExperienceBar(progress: records.progress, gained: outcome?.gained)
+            ExperienceBar(progress: records.progress, gained: outcome?.gained,
+                          showsTitle: false, animates: true)
 
             HStack(spacing: 14) {
                 Label("連続 \(records.currentStreak)", systemImage: "flame.fill")
@@ -144,17 +145,41 @@ struct RoundResultView: View {
     // MARK: - 待ち
 
     private var waits: some View {
-        HStack(alignment: .center, spacing: 8) {
-            Text("待ち")
-                .font(.system(size: 14, weight: .bold))
-                .foregroundStyle(.secondary)
-            ForEach(Array(round.waits.enumerated()), id: \.offset) { _, wait in
-                HStack(spacing: 3) {
-                    TileView(tile: wait.tile).frame(height: 54)
-                    Text("\(wait.count)")
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(alignment: .center, spacing: 8) {
+                Text("待ち")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(.secondary)
+                ForEach(Array(round.waits.enumerated()), id: \.offset) { _, wait in
+                    HStack(spacing: 3) {
+                        TileView(tile: wait.tile).frame(height: 54)
+                        Text("\(wait.count)")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundStyle(.secondary)
+                    }
                 }
+                Text("計\(round.waitCount)枚")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(.secondary)
+            }
+            // ここから何巡でツモれるか。山から戻さずに引くので超幾何分布
+            HStack(spacing: 14) {
+                ForEach(DrawChance.checkpoints, id: \.self) { turns in
+                    let p = DrawChance.probability(waits: round.waitCount,
+                                                   unseen: round.unseenTotal,
+                                                   draws: turns)
+                    HStack(alignment: .firstTextBaseline, spacing: 3) {
+                        Text("\(turns)巡")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.secondary)
+                        Text("\(Int((p * 100).rounded()))%")
+                            .font(.system(size: 17, weight: .heavy)).monospacedDigit()
+                            .foregroundStyle(.white)
+                    }
+                }
+                Text("でツモれる")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
             }
         }
     }

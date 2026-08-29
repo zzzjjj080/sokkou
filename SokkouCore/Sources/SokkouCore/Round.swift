@@ -24,6 +24,12 @@ public struct Round {
     /// ミスなくテンパイしたか
     public var wasFastest: Bool { isFinished && mistakes == 0 }
 
+    /// まだ見えていない牌の総数。ツモれる確率の分母に使う
+    public var unseenTotal: Int { wall.reduce(0, +) }
+
+    /// 待ちの合計枚数
+    public var waitCount: Int { waits.reduce(0) { $0 + $1.count } }
+
     /// 配牌は3〜4向聴のものだけを使う。近すぎても遠すぎても練習にならない。
     public static let dealtShantenRange = 3...4
 

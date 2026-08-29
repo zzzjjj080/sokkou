@@ -46,20 +46,13 @@ struct ContentView: View {
 
     private var header: some View {
         HStack(alignment: .center, spacing: 16) {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(game.records.rank?.display ?? "称号なし")
-                    .font(.system(size: 23, weight: .heavy))
-                    .foregroundStyle(Color(red: 1, green: 0.835, blue: 0.290))
-                if let next = game.records.nextRank {
-                    Text("次の\(next.rank.display)まで あと\(next.remaining)回")
-                        .font(.system(size: 13))
-                        .foregroundStyle(.secondary)
-                } else {
-                    Text("最高位").font(.system(size: 13)).foregroundStyle(.secondary)
-                }
-            }
+            // 称号はここだけに出す。メーターの中にも書くと同じものが2つ並ぶ
+            Text(game.records.rank?.display ?? "称号なし")
+                .font(.system(size: 23, weight: .heavy))
+                .foregroundStyle(Color(red: 1, green: 0.835, blue: 0.290))
+                .lineLimit(1)
             // 経験値メーター。段位が上がる条件はこれだけなので常に出しておく
-            ExperienceBar(progress: game.records.progress, gained: nil)
+            ExperienceBar(progress: game.records.progress, showsTitle: false)
                 .frame(maxWidth: 340)
             stat("連続", "\(game.records.currentStreak)")
             stat("最高連続", "\(game.records.bestStreak)")

@@ -118,3 +118,51 @@ struct SystemlessRandom: RandomNumberGenerator {
         return z ^ (z >> 31)
     }
 }
+
+/// 聴牌してからツモれる確率。山から戻さずに引くので超幾何分布で数える。
+struct DrawChanceTests {
+
+    @Test("待ちが無ければ0、ツモらなければ0")
+    func zeroCases() {
+        #expect(DrawChance.probability(waits: 0, unseen: 90, draws: 10) == 0)
+        #expect(DrawChance.probability(waits: 4, unseen: 90, draws: 0) == 0)
+    }
+
+    @Test("1回ツモは 待ち / 見えていない枚数 そのもの")
+    func singleDraw() {
+        let p = DrawChance.probability(waits: 4, unseen: 100, draws: 1)
+        #expect(abs(p - 0.04) < 1e-9)
+    }
+
+    @Test("ツモる回数が増えれば確率は上がる")
+    func increasesWithDraws() {
+        var previous = 0.0
+        for draws in 1...18 {
+            let p = DrawChance.probability(waits: 4, unseen: 90, draws: draws)
+            #expect(p > previous, "\(draws)巡で下がった")
+            #expect(p <= 1)
+            previous = p
+        }
+    }
+
+    @Test("待ちが広いほど確率は高い")
+    func increasesWithWaits() {
+        let narrow = DrawChance.probability(waits: 2, unseen: 90, draws: 10)
+        let wide = DrawChance.probability(waits: 8, unseen: 90, draws: 10)
+        #expect(wide > narrow)
+    }
+
+    @Test("戻さずに引くので、独立に引くより少しだけ高く出る")
+    func withoutReplacementIsHigher() {
+        let exact = DrawChance.probability(waits: 4, unseen: 90, draws: 10)
+        let naive = 1 - pow(1 - 4.0 / 90.0, 10)     // 毎回同じ確率で引く場合
+        #expect(exact > naive)
+        #expect(exact - naive < 0.03, "差はわずかなはず")
+    }
+
+    @Test("山を引き切っても1を超えない")
+    func neverExceedsOne() {
+        #expect(DrawChance.probability(waits: 4, unseen: 4, draws: 1) == 1)
+        #expect(DrawChance.probability(waits: 3, unseen: 5, draws: 99) <= 1)
+    }
+}
