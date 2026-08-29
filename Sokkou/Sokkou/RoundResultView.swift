@@ -162,23 +162,32 @@ struct RoundResultView: View {
                     .font(.system(size: 13, weight: .bold))
                     .foregroundStyle(.secondary)
             }
-            // ここから何巡でツモれるか。山から戻さずに引くので超幾何分布
-            HStack(spacing: 14) {
-                ForEach(DrawChance.checkpoints, id: \.self) { turns in
-                    let p = DrawChance.probability(waits: round.waitCount,
-                                                   unseen: round.unseenTotal,
-                                                   draws: turns)
-                    HStack(alignment: .firstTextBaseline, spacing: 3) {
-                        Text("\(turns)巡")
-                            .font(.system(size: 12))
-                            .foregroundStyle(.secondary)
-                        Text("\(Int((p * 100).rounded()))%")
-                            .font(.system(size: 17, weight: .heavy)).monospacedDigit()
-                            .foregroundStyle(.white)
+            // ここから何巡でツモれるか。区切りは残りのツモ回数までしか出さない
+            let points = DrawChance.checkpoints(remainingDraws: round.remainingDraws)
+            if points.isEmpty {
+                Text("ツモ番はもう残っていません")
+                    .font(.system(size: 12)).foregroundStyle(.secondary)
+            } else {
+                HStack(spacing: 14) {
+                    ForEach(points, id: \.self) { turns in
+                        let p = DrawChance.probability(waits: round.waitCount,
+                                                       unseen: round.unseenTotal,
+                                                       draws: turns)
+                        HStack(alignment: .firstTextBaseline, spacing: 3) {
+                            Text(turns == round.remainingDraws ? "残り\(turns)巡" : "あと\(turns)巡")
+                                .font(.system(size: 12))
+                                .foregroundStyle(.secondary)
+                            Text("\(Int((p * 100).rounded()))%")
+                                .font(.system(size: 17, weight: .heavy)).monospacedDigit()
+                                .foregroundStyle(.white)
+                        }
                     }
+                    Text("でツモれる")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
                 }
-                Text("でツモれる")
-                    .font(.system(size: 12))
+                Text("1局18ツモとして計算。他家は考えていないので実戦より高めに出ます")
+                    .font(.system(size: 10))
                     .foregroundStyle(.secondary)
             }
         }

@@ -27,6 +27,13 @@ public struct Round {
     /// まだ見えていない牌の総数。ツモれる確率の分母に使う
     public var unseenTotal: Int { wall.reduce(0, +) }
 
+    /// 1局で自分がツモれる回数。実戦の東家に合わせて18回とする。
+    /// 山136枚から王牌14枚と配牌52枚を引いた70枚を4人で分けると、1人あたり約18回。
+    public static let maxDrawsPerHand = 18
+
+    /// この局であと何回ツモれるか。聴牌後の確率を出すのに使う
+    public var remainingDraws: Int { max(0, Round.maxDrawsPerHand - turn) }
+
     /// 待ちの合計枚数
     public var waitCount: Int { waits.reduce(0) { $0 + $1.count } }
 

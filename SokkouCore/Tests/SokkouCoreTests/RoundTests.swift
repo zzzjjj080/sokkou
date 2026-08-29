@@ -166,3 +166,45 @@ struct DrawChanceTests {
         #expect(DrawChance.probability(waits: 3, unseen: 5, draws: 99) <= 1)
     }
 }
+
+/// 確率を出す区切りは、残りのツモ回数を超えてはいけない。
+/// ここを固定の5巡・10巡・15巡にしていたため、
+/// 10巡目に聴牌した局でも「15巡で55%」という起こりえない数字を出していた。
+struct DrawHorizonTests {
+
+    @Test("残り巡数を超える区切りは出さない")
+    func checkpointsFitInsideTheHand() {
+        for remaining in 0...18 {
+            for point in DrawChance.checkpoints(remainingDraws: remaining) {
+                #expect(point <= remaining, "残り\(remaining)巡で\(point)巡を出した")
+                #expect(point > 0)
+            }
+        }
+    }
+
+    @Test("残りが少なければ区切りも減る")
+    func fewerCheckpointsNearTheEnd() {
+        #expect(DrawChance.checkpoints(remainingDraws: 0).isEmpty)
+        #expect(DrawChance.checkpoints(remainingDraws: 2) == [2])
+        #expect(DrawChance.checkpoints(remainingDraws: 5) == [3, 5])
+        #expect(DrawChance.checkpoints(remainingDraws: 12) == [3, 6, 12])
+    }
+
+    @Test("巡目が進むほど残りは減る")
+    func remainingShrinksWithTurns() {
+        let calc = ShantenCalculator()
+        var rng = SystemlessRandom(seed: 31)
+        var round = Round(shantenCalculator: calc, rng: &rng)
+        #expect(round.remainingDraws == Round.maxDrawsPerHand)
+        round.draw(shantenCalculator: calc, rng: &rng)
+        #expect(round.remainingDraws == Round.maxDrawsPerHand - 1)
+    }
+
+    @Test("残り8巡・待ち4枚なら3割ほど。15巡ぶんの数字より低い")
+    func realisticNumbers() {
+        let eight = DrawChance.probability(waits: 4, unseen: 85, draws: 8)
+        let fifteen = DrawChance.probability(waits: 4, unseen: 85, draws: 15)
+        #expect(abs(eight - 0.33) < 0.02)
+        #expect(fifteen > eight + 0.15, "前は起こりえない15巡の数字を出していた")
+    }
+}

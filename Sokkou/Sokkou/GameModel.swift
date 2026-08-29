@@ -84,10 +84,27 @@ final class GameModel {
         var isChosen: Bool = false
     }
 
-    /// ヒントで枠を付ける牌の種類。上位5種まで。
+    /// ヒントで枠を付ける牌の種類。上位5種まで、ただし**最低3種は出す**。
+    ///
+    /// 採点対象(シャンテンを戻さない打牌)が1〜2種しかない局面があり、
+    /// そのままだと枠が1つしか付かずヒントの意味がなくなっていた。
+    /// 足りないぶんは点数順に、対象外の打牌からでも埋める。
+    static let hintMinimum = 3
+    static let hintMaximum = 5
+
     var hintKinds: [Tile] {
         guard showsHint, phase == .choosing, let evaluation else { return [] }
-        return Array(evaluation.options.filter { !$0.isShantenBack }.prefix(5).map(\.tile))
+        var kinds = evaluation.options
+            .filter { !$0.isShantenBack }
+            .prefix(GameModel.hintMaximum)
+            .map(\.tile)
+        if kinds.count < GameModel.hintMinimum {
+            for option in evaluation.options where !kinds.contains(option.tile) {
+                kinds.append(option.tile)
+                if kinds.count == GameModel.hintMinimum { break }
+            }
+        }
+        return kinds
     }
 
     /// 打牌後に見せる14枚。切った瞬間に手牌が入れ替わると、
