@@ -19,21 +19,33 @@
 
 ## 残っている作業
 
-### 1. スクリーンショット（未着手・要確認）
+### 1. スクリーンショット（完了）
 
-**横向きアプリのスクリーンショットが App Store Connect に通るか、前2作で前例がない。**
-縦向きの寸法は 6.9インチ = 1320×2868。横向きなら 2868×1320 になるはずだが、
-欄が出るかどうかを実物で確かめてから作る。
+**横向きは通る。** 6.5インチの欄に `2688 × 1242px` と明記されていた。
+前2作で前例のなかった点はこれで解決。
 
-先にアップロードを済ませてしまい、App Store Connect の
-スクリーンショット欄に何インチの枠が出るかを見てから作るのが早い。
+`store/screenshots/` に5枚、2688×1242 で用意済み。そのままドラッグすればよい。
 
-撮る候補（5枚まで）:
-1. 手牌を選ぶ画面（ヒントの赤枠が出ている状態）
-2. 打牌した直後（点数がすべての牌に出ている状態）
-3. 聴牌画面（獲得経験値とボーナス倍率、経験値メーター）
-4. 採点の内訳（比較表）
-5. 段位一覧
+| ファイル | 中身 |
+|---|---|
+| 01.png | 最速で聴牌する一手を選ぶ（ヒントの赤枠） |
+| 02.png | すべての牌に点数がつく（100点を選んだところ） |
+| 03.png | なぜその牌が速いのかを確かめる（採点の内訳） |
+| 04.png | ノーミスと精度で経験値が伸びる（昇格＋×1.50＋150） |
+| 05.png | 70段の称号を上がっていく（段位一覧） |
+
+撮り直すときは:
+
+```bash
+U=<シミュレータのUDID>            # iPhone 11 Pro Max = 6.5インチ = 1242×2688
+rm -rf /tmp/sokkou-shots
+cd ~/Claude/Sokkou/Sokkou
+xcodebuild test -project Sokkou.xcodeproj -scheme Sokkou \
+  -destination "platform=iOS Simulator,id=$U" \
+  -only-testing:SokkouUITests/StoreScreenshots -derivedDataPath /tmp/sokkou-shot
+swiftc -O ~/Claude/Sokkou/store/MakeScreenshots.swift -o /tmp/makeshots
+/tmp/makeshots /tmp/sokkou-shots ~/Claude/Sokkou/store/screenshots
+```
 
 ### 2. アーカイブとアップロード
 

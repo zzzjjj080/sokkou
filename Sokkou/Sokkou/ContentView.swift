@@ -64,6 +64,7 @@ struct ContentView: View {
                 Image(systemName: "gearshape.fill").font(.system(size: 22))
             }
             .buttonStyle(.plain).foregroundStyle(.secondary)
+            .accessibilityIdentifier("settings")
         }
     }
 
@@ -93,11 +94,23 @@ struct ContentView: View {
                 .overlay(RoundedRectangle(cornerRadius: 6)
                     .stroke(ringColor(for: slot), lineWidth: 3.5).padding(1.75))
                 .onTapGesture { game.choose(slot.tile) }
+                .accessibilityIdentifier(identifier(for: slot))
             Text(slot.isDrawn ? "ツモ" : " ")
                 .font(.system(size: 11, weight: .bold))
                 .foregroundStyle(Color(red: 1, green: 0.835, blue: 0.290))
         }
         .padding(.horizontal, 2)
+    }
+
+    /// 画面確認用の目印。撮影のときに最善の牌を選べるようにする。
+    /// **DEBUGビルドでしか最善を教えないので、配布版はただの通し番号になる。**
+    private func identifier(for slot: GameModel.HandSlot) -> String {
+        #if DEBUG
+        if game.phase == .choosing, game.evaluation?.isBest(slot.tile) == true {
+            return "tile-best"
+        }
+        #endif
+        return "tile-\(slot.id)"
     }
 
     /// 未回答のあいだはヒントの枠だけ、回答後は点数と結果の枠
