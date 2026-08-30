@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>速攻何切る — サポート</title>
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    max-width: 42rem;
+    margin: 0 auto;
+    padding: 2.5rem 1.25rem 4rem;
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic UI", sans-serif;
+    line-height: 1.85;
+    color: #1a1e26;
+    background: #f4f6fa;
+  }
+  @media (prefers-color-scheme: dark) {
+    body { color: #eaeef5; background: #0f1218; }
+    a { color: #8ab4f8; }
+    .lead, .faq { background: #182234; }
+    hr { border-top-color: #262c36; }
+  }
+  h1 { font-size: 1.6rem; margin-bottom: .25rem; }
+  h2 { font-size: 1.05rem; margin-top: 2.25rem; }
+  h3 { font-size: .95rem; margin-bottom: .3rem; }
+  .updated { color: #667085; font-size: .85rem; margin-top: 0; }
+  a { color: #2563eb; }
+  hr { border: none; border-top: 1px solid #dbe1ea; margin: 3rem 0; }
+  .lead { background: #e8eefb; padding: 1rem 1.25rem; border-radius: .75rem; }
+  .faq { background: #e8eefb; padding: .1rem 1.25rem 1rem; border-radius: .75rem; margin-top: 1rem; }
+  table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .95rem; }
+  th, td { text-align: left; padding: .5rem .6rem; border-bottom: 1px solid #dbe1ea; }
+  @media (prefers-color-scheme: dark) { th, td { border-bottom-color: #262c36; } }
+  th { color: #667085; font-weight: 600; font-size: .85rem; }
+</style>
+</head>
+<body>
+
+<h1>速攻何切る</h1>
+<p class="updated">最終更新 2026-08-30</p>
+
+<div class="lead">
+最速で聴牌する一手だけを選び続ける、麻雀の何切るアプリです。
+打点も役もドラも場況も考えません。「どれを切れば一番早く聴牌できるか」だけを繰り返します。
+</div>
+
+<h2>使い方</h2>
+<p>横画面で使います。14枚の手牌から1枚をタップして切ると、すべての牌に点数が出ます。
+もっとも速く聴牌できる打牌が100点、90点以上が正解です。聴牌するまでツモを続けます。</p>
+
+<h2>よくある質問</h2>
+
+<div class="faq">
+<h3>受け入れがいちばん広い牌が正解にならないのはなぜ？</h3>
+<p>目先の受け入れ枚数だけで決めていないためです。この先しばらく引き続けたときに
+どれくらいの割合で聴牌に届くかを計算しているので、受け入れが広くても
+その先で手が細る打牌は点数が下がります。「詳細」を開くと、
+最善の打牌と何がどう違うのかを並べて確かめられます。</p>
+
+<h3>「戻し（採点対象外）」と出るのはなぜ？</h3>
+<p>シャンテン数が戻る打牌です。この計算はシャンテン数をまたぐ比較が苦手だと
+実測で分かっているため、判断できないものは勧めない側に倒しています。
+点数は付かず、選ぶと不正解になります。</p>
+
+<h3>金枠が2枚以上出ることがある</h3>
+<p>点数の差が計算の誤差に収まっていて、順位を付けられない局面です。
+どれを選んでも最善として扱います。</p>
+
+<h3>経験値はどう決まる？</h3>
+<p>聴牌までに外した回数だけで決まります。何巡かかったかは見ません。
+ノーミスで100、外すたびに半分になります（1回で50、2回で25…最低1）。
+そのうえで、最善そのものを選べた割合に応じて最大1.5倍になります。</p>
+
+<h3>「ツモれる確率」が実戦より高い気がする</h3>
+<p>「山から続けて引いたら」の確率だからです。他家を考えていないので、
+当たり牌を取られることも先に和了られて局が終わることもありません。
+実戦ではここまでツモ番が回らないことが多く、実際の自摸和了率はこれより低くなります。</p>
+
+<h3>字牌や七対子は出ない？</h3>
+<p>出ません。萬子・筒子・索子の数牌だけを使い、面子手（4面子1雀頭）だけで
+シャンテン数を数えています。速度以外の要素を削って、
+聴牌までの最短手順に集中できるようにしています。</p>
+
+<h3>記録を消したい</h3>
+<p>右上の歯車から「記録をすべて消す」を選んでください。
+累計経験値・連続記録・称号がすべて最初に戻ります。元には戻せません。</p>
+</div>
+
+<h2>お問い合わせ</h2>
+<p>不具合のご報告やご要望は
+<a href="mailto:zzzjjj080@gmail.com">zzzjjj080@gmail.com</a> までお願いします。</p>
+
+<hr>
+
+<p><a href="privacy.html">プライバシーポリシー</a></p>
+
+</body>
+</html>
