@@ -5,6 +5,7 @@ struct SettingsSheet: View {
     @Bindable var game: GameModel
     @Environment(\.dismiss) private var dismiss
     @State private var showsResetConfirmation = false
+    @State private var tipJar = TipJar(productID: TipJar.productID)
 
     var body: some View {
         NavigationStack {
@@ -48,6 +49,8 @@ struct SettingsSheet: View {
                     Text("打点・役・ドラ・場況・待ちの良し悪しは考慮しません。字牌と赤5は使わず、七対子も考えません。")
                         .font(.system(size: 12)).foregroundStyle(.secondary)
                 }
+
+                CoffeeTipSection(tipJar: tipJar)
             }
             .frame(maxWidth: 640)
             .frame(maxWidth: .infinity)
