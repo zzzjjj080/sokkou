@@ -7,12 +7,10 @@ struct ContentView: View {
     @State private var showsDetail = false
     @State private var showsSettings = false
 
-    private let background = Color(red: 0.106, green: 0.122, blue: 0.141)
-    private let panel = Color(red: 0.149, green: 0.169, blue: 0.200)
 
     var body: some View {
         ZStack {
-            background.ignoresSafeArea()
+            Palette.background.ignoresSafeArea()
             Group {
                 if game.phase == .finished {
                     // 局が終わったら画面ごと差し替える。手牌が並んだままだと
@@ -40,6 +38,10 @@ struct ContentView: View {
             }
         }
         .sheet(isPresented: $showsSettings) { SettingsSheet(game: game) }
+        // 初回だけ全画面で遊び方を出す。設定からいつでも読み直せる
+        .fullScreenCover(isPresented: $game.needsIntroduction) {
+            IntroductionView { game.needsIntroduction = false }
+        }
     }
 
     // MARK: - 上段（段位と記録）
@@ -49,7 +51,7 @@ struct ContentView: View {
             // 称号はここだけに出す。メーターの中にも書くと同じものが2つ並ぶ
             Text(game.records.rank?.display ?? "称号なし")
                 .font(.system(size: 23, weight: .heavy))
-                .foregroundStyle(Color(red: 1, green: 0.835, blue: 0.290))
+                .foregroundStyle(Palette.gold)
                 .lineLimit(1)
             // 経験値メーター。段位が上がる条件はこれだけなので常に出しておく
             ExperienceBar(from: game.records.experience, to: game.records.experience,
@@ -59,7 +61,7 @@ struct ContentView: View {
             stat("最高連続", "\(game.records.bestStreak)")
             Text("\(game.turn)巡目")
                 .font(.system(size: 19, weight: .heavy))
-                .foregroundStyle(Color(red: 1, green: 0.835, blue: 0.290))
+                .foregroundStyle(Palette.gold)
             Button { showsSettings = true } label: {
                 Image(systemName: "gearshape.fill").font(.system(size: 22))
             }
@@ -87,104 +89,77 @@ struct ContentView: View {
         }
     }
 
-    private func tileSlot(_ slot: GameModel.HandSlot) -> some View {
-        VStack(spacing: 4) {
-            scoreBadge(for: slot.tile)
-            TileView(tile: slot.tile)
-                .overlay(RoundedRectangle(cornerRadius: 6)
-                    .stroke(ringColor(for: slot), lineWidth: 3.5).padding(1.75))
-                .onTapGesture { game.choose(slot.tile) }
-                .accessibilityIdentifier(identifier(for: slot))
-            Text(slot.isDrawn ? "ツモ" : " ")
-                .font(.system(size: 11, weight: .bold))
-                .foregroundStyle(Color(red: 1, green: 0.835, blue: 0.290))
-        }
-        .padding(.horizontal, 2)
+    private func tileSlot(_ slot: HandSlot) -> some View {
+        TileSlotView(slot: slot,
+                     evaluation: game.evaluation,
+                     isRevealed: game.phase != .choosing,
+                     accessibilityID: identifier(for: slot),
+                     onTap: { game.choose(slot.tile) })
     }
 
-    /// 画面確認用の目印。撮影のときに最善の牌を選べるようにする。
-    /// **DEBUGビルドでしか最善を教えないので、配布版はただの通し番号になる。**
-    private func identifier(for slot: GameModel.HandSlot) -> String {
+    /// 画面確認用の目印。撮影では最善を、動作確認では**わざと外す牌**を選べるようにする。
+    /// 90点以上は正解なので、「最善でない牌」を切っても外しにならないことがある。
+    /// **DEBUGビルドでしか答えを教えないので、配布版はただの通し番号になる。**
+    private func identifier(for slot: HandSlot) -> String {
         #if DEBUG
-        if game.phase == .choosing, game.evaluation?.isBest(slot.tile) == true {
-            return "tile-best"
+        if game.phase == .choosing, let evaluation = game.evaluation {
+            if evaluation.isBest(slot.tile) { return "tile-best" }
+            if !evaluation.isCorrect(slot.tile) { return "tile-miss" }
         }
         #endif
         return "tile-\(slot.id)"
-    }
-
-    /// 未回答のあいだはヒントの枠だけ、回答後は点数と結果の枠
-    private func ringColor(for slot: GameModel.HandSlot) -> Color {
-        let tile = slot.tile
-        guard let evaluation = game.evaluation else { return .clear }
-        if game.phase == .choosing {
-            // 同じ牌が2枚あっても枠は1枚目だけ
-            return slot.showsHintRing ? Color(red: 1, green: 0.231, blue: 0.188) : .clear
-        }
-        if evaluation.isBest(tile) { return Color(red: 1, green: 0.835, blue: 0.290) }
-        if evaluation.isCorrect(tile) { return Color(red: 0.247, green: 0.627, blue: 0.373) }
-        if slot.isChosen { return Color(red: 0.290, green: 0.490, blue: 1) }
-        return .clear
-    }
-
-    @ViewBuilder
-    private func scoreBadge(for tile: Tile) -> some View {
-        if game.phase != .choosing, let option = game.evaluation?.option(for: tile) {
-            Text(option.score.map { "\($0)" } ?? "戻し")
-                .font(.system(size: option.score == nil ? 11 : 17, weight: .heavy))
-                .monospacedDigit()
-                .foregroundStyle(badgeText(option))
-                .padding(.horizontal, 6).padding(.vertical, 2)
-                .background(badgeFill(option), in: RoundedRectangle(cornerRadius: 6))
-        } else {
-            Text(" ").font(.system(size: 17, weight: .heavy))
-        }
-    }
-
-    private func badgeFill(_ option: DiscardOption) -> Color {
-        guard let evaluation = game.evaluation else { return .gray }
-        if option.isShantenBack { return Color(red: 0.35, green: 0.24, blue: 0.24) }
-        if evaluation.isBest(option.tile) { return Color(red: 0.910, green: 0.725, blue: 0.227) }
-        if evaluation.isCorrect(option.tile) { return Color(red: 0.180, green: 0.490, blue: 0.275) }
-        return Color(red: 0.227, green: 0.251, blue: 0.282)
-    }
-
-    private func badgeText(_ option: DiscardOption) -> Color {
-        guard let evaluation = game.evaluation else { return .white }
-        return evaluation.isBest(option.tile) ? Color(red: 0.14, green: 0.11, blue: 0.01) : .white
     }
 
     // MARK: - 下段（判定とボタン）
 
     private var bottomRow: some View {
         HStack(alignment: .center, spacing: 14) {
-            Text(verdictText)
-                .font(.system(size: 21, weight: .heavy))
-                .foregroundStyle(verdictColor)
-                .lineLimit(2)
-                .minimumScaleFactor(0.7)
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-            VStack(spacing: 8) {
-                Button("詳細") { showsDetail = true }
-                    .font(.system(size: 15, weight: .bold))
-                    .buttonStyle(.bordered)
-                    .disabled(game.phase == .choosing || game.isBusy)
-                Button("やり直す") { game.restart() }
-                    .font(.system(size: 15, weight: .bold))
-                    .buttonStyle(.bordered)
-                    .disabled(game.isBusy)
+            // 左利きなら、押す回数がいちばん多い「ツモる」を親指側へ持ってくる
+            if game.isLeftHanded {
+                drawButton
+                sideButtons
+                verdict
+            } else {
+                verdict
+                sideButtons
+                drawButton
             }
-
-            // ツモるは一番右に、一番大きく
-            Button { game.advance() } label: {
-                Text(game.isBusy ? "少々お待ちください" : actionLabel)
-                    .font(.system(size: game.isBusy ? 15 : 26, weight: .heavy))
-                    .frame(width: 168, height: 74)
-            }
-            .buttonStyle(.borderedProminent)
-            .disabled(game.phase == .choosing || game.isBusy)
         }
+    }
+
+    private var verdict: some View {
+        Text(verdictText)
+            .font(.system(size: 21, weight: .heavy))
+            .foregroundStyle(verdictColor)
+            .lineLimit(2)
+            .minimumScaleFactor(0.7)
+            .frame(maxWidth: .infinity,
+                   alignment: game.isLeftHanded ? .trailing : .leading)
+    }
+
+    private var sideButtons: some View {
+        VStack(spacing: 8) {
+            Button("詳細") { showsDetail = true }
+                .font(.system(size: 15, weight: .bold))
+                .buttonStyle(.bordered)
+                .disabled(game.phase == .choosing || game.isBusy)
+            Button("やり直す") { game.restart() }
+                .font(.system(size: 15, weight: .bold))
+                .buttonStyle(.bordered)
+                .disabled(game.isBusy)
+        }
+    }
+
+    /// 一番大きく。既定では一番右（設定で左に移せる）
+    private var drawButton: some View {
+        Button { game.advance() } label: {
+            Text(game.isBusy ? "少々お待ちください" : actionLabel)
+                .font(.system(size: game.isBusy ? 15 : 26, weight: .heavy))
+                .frame(width: 168, height: 74)
+        }
+        .buttonStyle(.borderedProminent)
+        .disabled(game.phase == .choosing || game.isBusy)
+        .accessibilityIdentifier("draw")
     }
 
     private var verdictText: String {
@@ -215,9 +190,9 @@ struct ContentView: View {
     private var verdictColor: Color {
         guard game.phase != .choosing, let evaluation = game.evaluation, let chosen = game.chosen
         else { return .secondary }
-        if game.phase == .finished { return Color(red: 1, green: 0.835, blue: 0.290) }
-        if evaluation.isCorrect(chosen) { return Color(red: 0.42, green: 0.85, blue: 0.55) }
-        return Color(red: 1, green: 0.60, blue: 0.55)
+        if game.phase == .finished { return Palette.gold }
+        if evaluation.isCorrect(chosen) { return Palette.green }
+        return Palette.miss
     }
 
     private var actionLabel: String {

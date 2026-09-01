@@ -37,7 +37,7 @@ struct DetailSheet: View {
                 }
             }
         }
-        .presentationBackground(Color(red: 0.149, green: 0.169, blue: 0.200))
+        .presentationBackground(Palette.panel)
     }
 
     // MARK: - 比較表
@@ -56,7 +56,7 @@ struct DetailSheet: View {
             row("点数", mine.score.map { "\($0)点" } ?? "対象外", "100点",
                 mineWins: false, bestWins: true)
         }
-        .background(Color.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 10))
+        .background(Palette.faintFill, in: RoundedRectangle(cornerRadius: 10))
     }
 
     private func row(_ label: String, _ mine: String, _ best: String,
@@ -68,12 +68,12 @@ struct DetailSheet: View {
                 .frame(width: 130, alignment: .leading)
             Text(mine)
                 .font(.system(size: isHeader ? 12 : 14, weight: mineWins ? .heavy : .regular))
-                .foregroundStyle(isHeader ? Color(red: 0.62, green: 0.75, blue: 1)
+                .foregroundStyle(isHeader ? Palette.heading
                                  : (mineWins ? .green : (bestWins ? .red : .primary)))
                 .frame(maxWidth: .infinity)
             Text(best)
                 .font(.system(size: isHeader ? 12 : 14, weight: bestWins ? .heavy : .regular))
-                .foregroundStyle(isHeader ? Color(red: 1, green: 0.835, blue: 0.290)
+                .foregroundStyle(isHeader ? Palette.gold
                                  : (bestWins ? .green : (mineWins ? .red : .primary)))
                 .frame(maxWidth: .infinity)
         }
@@ -141,8 +141,8 @@ struct DetailSheet: View {
 
     private func scoreColor(_ option: DiscardOption) -> Color {
         if option.isShantenBack { return .secondary }
-        if evaluation.isBest(option.tile) { return Color(red: 1, green: 0.835, blue: 0.290) }
-        if evaluation.isCorrect(option.tile) { return Color(red: 0.42, green: 0.85, blue: 0.55) }
+        if evaluation.isBest(option.tile) { return Palette.gold }
+        if evaluation.isCorrect(option.tile) { return Palette.green }
         return .primary
     }
 

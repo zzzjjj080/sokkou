@@ -27,6 +27,9 @@ final class GameModel {
     private(set) var records: Records
     /// 直前の局で起きたこと（昇格したかなど）
     private(set) var lastOutcome: RoundOutcome?
+    /// 外した局面のたまり場。あとでまとめて解き直す
+    private(set) var reviewStore: ReviewStore
+
     /// 配牌や採点の最中。この間はボタンを押せなくする。
     /// 押しても反応が無いと二度押しされ、2局ぶん進んでしまうため
     private(set) var isBusy = false
@@ -42,10 +45,23 @@ final class GameModel {
         }
     }
 
+    /// ツモるボタンを左に置く。左手で持つ人のための入れ替え
+    var isLeftHanded: Bool {
+        didSet { UserDefaults.standard.set(isLeftHanded, forKey: Keys.leftHanded) }
+    }
+
+    /// 遊び方をまだ一度も見ていない
+    var needsIntroduction: Bool {
+        didSet { UserDefaults.standard.set(!needsIntroduction, forKey: Keys.introSeen) }
+    }
+
     private enum Keys {
         static let records = "records.v1"
         static let hint = "showsHint"
         static let haptics = "hapticsEnabled"
+        static let leftHanded = "isLeftHanded"
+        static let introSeen = "hasSeenIntroduction"
+        static let review = "review.v1"
     }
 
     init() {
@@ -54,8 +70,26 @@ final class GameModel {
         evaluator = Evaluator(shantenCalculator: calculator)
 
         let defaults = UserDefaults.standard
+        #if DEBUG
+        // 動作確認のときだけ、初回起動と同じ状態から始められるようにする。
+        // **DEBUGビルドでしか読まないので、配布版では消えない。**
+        if ProcessInfo.processInfo.arguments.contains("-SOKKOU_RESET") {
+            for key in [Keys.records, Keys.hint, Keys.haptics,
+                        Keys.leftHanded, Keys.introSeen, Keys.review] {
+                defaults.removeObject(forKey: key)
+            }
+        }
+        #endif
         showsHint = defaults.object(forKey: Keys.hint) as? Bool ?? true
         hapticsEnabled = defaults.object(forKey: Keys.haptics) as? Bool ?? true
+        isLeftHanded = defaults.object(forKey: Keys.leftHanded) as? Bool ?? false
+        needsIntroduction = !(defaults.object(forKey: Keys.introSeen) as? Bool ?? false)
+        if let data = defaults.data(forKey: Keys.review),
+           let saved = try? JSONDecoder().decode(ReviewStore.self, from: data) {
+            reviewStore = saved
+        } else {
+            reviewStore = ReviewStore()
+        }
         if let data = defaults.data(forKey: Keys.records),
            let saved = try? JSONDecoder().decode(Records.self, from: data) {
             records = saved
@@ -72,17 +106,6 @@ final class GameModel {
     }
 
     // MARK: - 表示に使う値
-
-    /// 画面に並べる1枚ぶん
-    struct HandSlot: Identifiable {
-        let id: Int
-        let tile: Tile
-        let isDrawn: Bool
-        /// ヒントの枠を出すか
-        let showsHintRing: Bool
-        /// 自分が選んで切った牌か
-        var isChosen: Bool = false
-    }
 
     /// ヒントで枠を付ける牌の種類。上位5種まで、ただし**最低3種は出す**。
     ///
@@ -111,23 +134,10 @@ final class GameModel {
     /// 自分が何を選んだのか画面から消えてしまうため、次のツモまで凍結して見せる。
     private var frozenSlots: [HandSlot]?
 
-    /// 手牌13枚 + ツモ牌。
-    /// 同じ牌が2枚あっても切る候補としては1つなので、**ヒントの枠は1枚目だけに付ける。**
+    /// 手牌13枚 + ツモ牌。並べ方の規則は HandLayout に置いてある
     var handSlots: [HandSlot] {
-        if let frozenSlots { return frozenSlots }
-        let candidates = hintKinds
-        var marked = Set<Tile>()
-        var slots: [HandSlot] = []
-        for (index, tile) in round.hand.tiles.enumerated() {
-            let shows = candidates.contains(tile) && !marked.contains(tile)
-            if shows { marked.insert(tile) }
-            slots.append(HandSlot(id: index, tile: tile, isDrawn: false, showsHintRing: shows))
-        }
-        if let drawn = round.drawn {
-            let shows = candidates.contains(drawn) && !marked.contains(drawn)
-            slots.append(HandSlot(id: 100, tile: drawn, isDrawn: true, showsHintRing: shows))
-        }
-        return slots
+        frozenSlots ?? HandLayout.slots(hand: round.hand.tiles, drawn: round.drawn,
+                                        hintKinds: hintKinds)
     }
 
     var handTiles: [Tile] { round.hand.tiles }
@@ -155,14 +165,7 @@ final class GameModel {
         Haptics.tap()
         chosen = tile
         // 入れ替わる前の14枚を、選んだ牌に印を付けて残す
-        frozenSlots = handSlots.map { slot in
-            var copy = slot
-            copy.isChosen = false
-            return copy
-        }
-        if let index = frozenSlots?.firstIndex(where: { $0.tile == tile }) {
-            frozenSlots?[index].isChosen = true
-        }
+        frozenSlots = HandLayout.marking(handSlots, chosen: tile)
         let isCorrect = evaluation.isCorrect(tile)
         let after = fourteen.removing(tile)
         let reachesTenpai = shantenCalculator.shanten(after) <= 0
@@ -179,11 +182,47 @@ final class GameModel {
             Haptics.incorrect()
         }
 
+        rememberIfMissed(chosen: tile, evaluation: evaluation)
+
         if round.isFinished {
             finishRound()
         } else {
             phase = .afterDiscard
         }
+    }
+
+    /// 正解でなかった局面を復習用に取っておく。
+    /// **戻しも取っておく**（速さだけを見るなら選ばない1枚なので、覚え直す価値がある）
+    private func rememberIfMissed(chosen tile: Tile, evaluation: Evaluation) {
+        guard !evaluation.isCorrect(tile), let drawn = round.drawn else { return }
+        reviewStore.record(ReviewPosition(hand: round.hand.tiles.map(\.index),
+                                          drawn: drawn.index, chosen: tile.index))
+        saveReview()
+    }
+
+    /// 復習で正解できた局面は一覧から外す
+    func retire(_ position: ReviewPosition) {
+        reviewStore.remove(id: position.id)
+        saveReview()
+    }
+
+    func clearReview() {
+        reviewStore.removeAll()
+        saveReview()
+    }
+
+    private func saveReview() {
+        if let data = try? JSONEncoder().encode(reviewStore) {
+            UserDefaults.standard.set(data, forKey: Keys.review)
+        }
+    }
+
+    /// 復習を始める。局面が無ければ nil
+    func makeReviewSession() -> ReviewSession? {
+        guard !reviewStore.isEmpty else { return nil }
+        return ReviewSession(positions: reviewStore.newestFirst,
+                             shantenCalculator: shantenCalculator,
+                             evaluator: evaluator)
     }
 
     private func finishRound() {

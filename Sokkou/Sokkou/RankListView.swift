@@ -7,8 +7,6 @@ import SokkouCore
 struct RankListView: View {
     let records: Records
 
-    private let gold = Color(red: 1, green: 0.835, blue: 0.290)
-    private let green = Color(red: 0.42, green: 0.85, blue: 0.55)
 
     private var entries: [TitleEntry] { RankLadder.titleEntries(forExperience: records.experience) }
 
@@ -39,14 +37,14 @@ struct RankListView: View {
         HStack(spacing: 12) {
             Image(systemName: icon(entry))
                 .font(.system(size: 16))
-                .foregroundStyle(entry.isCurrent ? gold
-                                 : (entry.isCompleted ? green : Color.secondary.opacity(0.5)))
+                .foregroundStyle(entry.isCurrent ? Palette.gold
+                                 : (entry.isCompleted ? Palette.green : Color.secondary.opacity(0.5)))
                 .frame(width: 22)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(entry.displayName)
                     .font(.system(size: 17, weight: entry.isCurrent ? .heavy : .semibold))
-                    .foregroundStyle(entry.isCurrent ? gold
+                    .foregroundStyle(entry.isCurrent ? Palette.gold
                                      : (entry.isReached ? .primary : .secondary))
                 Text("\(entry.firstRequirement) 〜 \(entry.lastRequirement) EXP")
                     .font(.system(size: 12)).monospacedDigit()
@@ -59,9 +57,9 @@ struct RankListView: View {
                 VStack(alignment: .trailing, spacing: 2) {
                     Text("いまここ")
                         .font(.system(size: 11, weight: .heavy))
-                        .foregroundStyle(Color(red: 0.14, green: 0.11, blue: 0.01))
+                        .foregroundStyle(Palette.goldInk)
                         .padding(.horizontal, 7).padding(.vertical, 2)
-                        .background(gold, in: Capsule())
+                        .background(Palette.goldFill, in: Capsule())
                     Text("\(entry.reachedLevels) / \(entry.levelCount)")
                         .font(.system(size: 12, weight: .bold)).monospacedDigit()
                         .foregroundStyle(.secondary)
@@ -69,7 +67,7 @@ struct RankListView: View {
             } else if entry.isCompleted {
                 Text("制覇")
                     .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(green)
+                    .foregroundStyle(Palette.green)
             }
         }
     }

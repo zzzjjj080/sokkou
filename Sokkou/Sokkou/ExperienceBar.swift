@@ -22,8 +22,6 @@ struct ExperienceBar: View {
     @State private var displayed: Int = 0
     @State private var hasStarted = false
 
-    private let gold = Color(red: 1, green: 0.835, blue: 0.290)
-    private let fresh = Color(red: 0.55, green: 1, blue: 0.65)
 
     private var progress: RankProgress { RankLadder.progress(forExperience: displayed) }
     private var isGrowing: Bool { animates && displayed < to }
@@ -34,7 +32,7 @@ struct ExperienceBar: View {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text(progress.current?.display ?? "称号なし")
                         .font(.system(size: 17, weight: .heavy))
-                        .foregroundStyle(gold)
+                        .foregroundStyle(Palette.gold)
                         .lineLimit(1)
                     Spacer(minLength: 4)
                     Text("\(displayed) EXP")
@@ -45,9 +43,9 @@ struct ExperienceBar: View {
 
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
-                    Capsule().fill(Color.white.opacity(0.12))
+                    Capsule().fill(Palette.track)
                     Capsule()
-                        .fill(isGrowing || displayed != from ? fresh : gold)
+                        .fill(isGrowing || displayed != from ? Palette.freshExp : Palette.goldFill)
                         .frame(width: max(0, geo.size.width * progress.fraction))
                 }
             }
@@ -61,7 +59,7 @@ struct ExperienceBar: View {
             } else {
                 Text("最高位に到達しています")
                     .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(gold)
+                    .foregroundStyle(Palette.gold)
             }
         }
         .onAppear(perform: start)

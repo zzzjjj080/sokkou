@@ -6,8 +6,8 @@ struct SokkouApp: App {
 
     var body: some Scene {
         WindowGroup {
+            // 明るい画面にも合わせる。色は Palette が切り替える
             ContentView(game: game)
-                .preferredColorScheme(.dark)
                 .task { Haptics.warmUp() }
         }
     }

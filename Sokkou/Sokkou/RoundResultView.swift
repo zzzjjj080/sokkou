@@ -11,8 +11,6 @@ struct RoundResultView: View {
     let outcome: RoundOutcome?
     let onNext: () -> Void
 
-    private let gold = Color(red: 1, green: 0.835, blue: 0.290)
-    private let green = Color(red: 0.42, green: 0.85, blue: 0.55)
 
     /// この局の打牌数。1巡に1枚切るので巡目と同じ
     private var discards: Int { round.turn }
@@ -30,7 +28,7 @@ struct RoundResultView: View {
             Spacer(minLength: 8)
             HStack(alignment: .top, spacing: 22) {
                 roundScore
-                Divider().frame(height: 116).overlay(Color.white.opacity(0.15))
+                Divider().frame(height: 116).overlay(Palette.hairline)
                 rankMeter
             }
             Spacer(minLength: 8)
@@ -58,21 +56,21 @@ struct RoundResultView: View {
                 // 昇格は目立たせる。バーが伸びきってから出す
                 Text("🎊 昇格!")
                     .font(.system(size: 34, weight: .black))
-                    .foregroundStyle(gold)
+                    .foregroundStyle(Palette.gold)
                     .scaleEffect(showsPromotion ? 1 : 0.6)
                     .opacity(showsPromotion ? 1 : 0)
                 Text(promoted.display)
                     .font(.system(size: 27, weight: .heavy))
-                    .foregroundStyle(gold)
+                    .foregroundStyle(Palette.gold)
                     .opacity(showsPromotion ? 1 : 0)
             } else if round.wasFastest {
                 Text("🎉 最速聴牌!")
                     .font(.system(size: 34, weight: .black))
-                    .foregroundStyle(gold)
+                    .foregroundStyle(Palette.gold)
             } else {
                 Text("🀄 聴牌")
                     .font(.system(size: 34, weight: .black))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
             }
             Text("\(round.turn)巡目")
                 .font(.system(size: 20, weight: .bold))
@@ -91,7 +89,7 @@ struct RoundResultView: View {
             HStack(alignment: .firstTextBaseline, spacing: 4) {
                 Text("\(correct)")
                     .font(.system(size: 46, weight: .black)).monospacedDigit()
-                    .foregroundStyle(round.mistakes == 0 ? green : .white)
+                    .foregroundStyle(round.mistakes == 0 ? Palette.green : .primary)
                 Text("/ \(discards)")
                     .font(.system(size: 22, weight: .bold)).monospacedDigit()
                     .foregroundStyle(.secondary)
@@ -103,7 +101,7 @@ struct RoundResultView: View {
             HStack(spacing: 5) {
                 ForEach(0..<discards, id: \.self) { index in
                     Circle()
-                        .fill(index < correct ? green : Color(red: 0.85, green: 0.35, blue: 0.30))
+                        .fill(index < correct ? Palette.green : Palette.missDot)
                         .frame(width: 10, height: 10)
                 }
             }
@@ -111,7 +109,7 @@ struct RoundResultView: View {
                  ? "すべて90点以上　うち最善 \(round.bestChoices)"
                  : "外した打牌 \(round.mistakes)回　最善 \(round.bestChoices)")
                 .font(.system(size: 13))
-                .foregroundStyle(round.mistakes == 0 ? green : .secondary)
+                .foregroundStyle(round.mistakes == 0 ? Palette.green : .secondary)
         }
     }
 
@@ -126,7 +124,7 @@ struct RoundResultView: View {
                     .foregroundStyle(.secondary)
                 Text("+\(outcome?.gained ?? 0)")
                     .font(.system(size: 40, weight: .black)).monospacedDigit()
-                    .foregroundStyle(Color(red: 0.55, green: 1, blue: 0.65))
+                    .foregroundStyle(Palette.freshExp)
                 if let outcome {
                     Text("\(outcome.base) × \(multiplierText(outcome.multiplier))")
                         .font(.system(size: 14, weight: .bold)).monospacedDigit()
@@ -142,9 +140,9 @@ struct RoundResultView: View {
                     Text("最善 \(outcome.score.bestChoices)/\(outcome.score.discards)"
                          + "  ボーナス ×\(multiplierText(outcome.multiplier))")
                         .font(.system(size: 13, weight: .heavy))
-                        .foregroundStyle(gold)
+                        .foregroundStyle(Palette.gold)
                         .padding(.horizontal, 8).padding(.vertical, 2)
-                        .background(gold.opacity(0.15), in: Capsule())
+                        .background(Palette.gold.opacity(0.15), in: Capsule())
                 } else if let outcome {
                     Text("最善 \(outcome.score.bestChoices)/\(outcome.score.discards)"
                          + "  ボーナスなし")
@@ -221,7 +219,7 @@ struct RoundResultView: View {
                             .foregroundStyle(.secondary)
                         Text("\(Int((p * 100).rounded()))%")
                             .font(.system(size: 17, weight: .heavy)).monospacedDigit()
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.primary)
                     }
                 }
             }
