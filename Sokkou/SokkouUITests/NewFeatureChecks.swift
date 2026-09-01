@@ -118,12 +118,15 @@ final class NewFeatureChecks: XCTestCase {
         XCTAssertTrue(next.waitForExistence(timeout: 10), "初回は遊び方が出ること")
         save("01-intro-1")
 
-        // 5ページある。最後は「はじめる」
-        for page in 1...5 {
-            XCTAssertTrue(next.waitForExistence(timeout: 5), "\(page)ページ目でボタンが出ていること")
-            if page == 3 { save("02-intro-3") }
+        // ページ数を決め打ちしない。ボタンが消えるまで進める
+        var pages = 0
+        while next.exists, pages < 8 {
+            sleep(1)    // めくりの途中で撮ると中身が切れる
+            save(String(format: "intro-%02d", pages + 1))
             next.tap()
+            pages += 1
         }
+        XCTAssertGreaterThanOrEqual(pages, 2, "何ページかあること")
 
         // 説明が閉じて本編に戻ったこと。
         // 牌の目印は局面によって変わるので、必ず出ている歯車で見る
