@@ -84,6 +84,13 @@ final class GameModel {
         hapticsEnabled = defaults.object(forKey: Keys.haptics) as? Bool ?? true
         isLeftHanded = defaults.object(forKey: Keys.leftHanded) as? Bool ?? false
         needsIntroduction = !(defaults.object(forKey: Keys.introSeen) as? Bool ?? false)
+        #if DEBUG
+        // 動作確認用の入口。**DEBUGビルドでしか読まないので、配布版では効かない。**
+        let arguments = ProcessInfo.processInfo.arguments
+        if arguments.contains("-SOKKOU_LEFT_HANDED") {
+            isLeftHanded = true
+        }
+        #endif
         if let data = defaults.data(forKey: Keys.review),
            let saved = try? JSONDecoder().decode(ReviewStore.self, from: data) {
             reviewStore = saved
@@ -102,6 +109,15 @@ final class GameModel {
                       shantenRange: GameModel.dealRange)
         rng = generator
         Haptics.isEnabled = hapticsEnabled
+        #if DEBUG
+        // 復習の画面を、決まった1局面で確かめられるようにする。
+        // 1萬2萬6萬6萬8萬9萬 / 2筒3筒4筒 / 1索4索7索8索 + ツモ8索
+        // （self が組み上がってからでないと reviewStore を書き換えられない）
+        if arguments.contains("-SOKKOU_SEED_REVIEW") {
+            reviewStore.record(ReviewPosition(hand: [0, 1, 5, 5, 7, 8, 10, 11, 12, 18, 21, 24, 25],
+                                              drawn: 25, chosen: 0))
+        }
+        #endif
         drawTile()
     }
 
@@ -171,6 +187,14 @@ final class GameModel {
         let reachesTenpai = shantenCalculator.shanten(after) <= 0
         let waits = reachesTenpai ? (evaluation.option(for: tile)?.ukeire ?? []) : []
 
+        // 切る前の14枚を控える。**discard すると drawn が手牌に入って nil になる**ので、
+        // あとから復習用の局面を組み立てることはできない
+        let missedPosition: ReviewPosition? = evaluation.isCorrect(tile) ? nil
+            : round.drawn.map { drawn in
+                ReviewPosition(hand: round.hand.tiles.map(\.index),
+                               drawn: drawn.index, chosen: tile.index)
+            }
+
         round.discard(tile, isCorrect: isCorrect, isBest: evaluation.isBest(tile),
                       shantenCalculator: shantenCalculator, waitsIfTenpai: waits)
 
@@ -182,22 +206,16 @@ final class GameModel {
             Haptics.incorrect()
         }
 
-        rememberIfMissed(chosen: tile, evaluation: evaluation)
+        if let missedPosition {
+            reviewStore.record(missedPosition)
+            saveReview()
+        }
 
         if round.isFinished {
             finishRound()
         } else {
             phase = .afterDiscard
         }
-    }
-
-    /// 正解でなかった局面を復習用に取っておく。
-    /// **戻しも取っておく**（速さだけを見るなら選ばない1枚なので、覚え直す価値がある）
-    private func rememberIfMissed(chosen tile: Tile, evaluation: Evaluation) {
-        guard !evaluation.isCorrect(tile), let drawn = round.drawn else { return }
-        reviewStore.record(ReviewPosition(hand: round.hand.tiles.map(\.index),
-                                          drawn: drawn.index, chosen: tile.index))
-        saveReview()
     }
 
     /// 復習で正解できた局面は一覧から外す

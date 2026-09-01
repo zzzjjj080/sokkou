@@ -94,6 +94,9 @@ struct TileSlotView: View {
             Text(option.score.map { "\($0)" } ?? "戻し")
                 .font(.system(size: option.score == nil ? 11 : 17, weight: .heavy))
                 .monospacedDigit()
+                // 「100」は3桁あり、隣の「戻し」に押されると2行に折れてしまう
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
                 .foregroundStyle(badgeInk(option))
                 .padding(.horizontal, 6).padding(.vertical, 2)
                 .background(badgeFill(option), in: RoundedRectangle(cornerRadius: 6))

@@ -31,6 +31,7 @@ struct IntroductionView: View {
                         .buttonStyle(.plain)
                         .foregroundStyle(.secondary)
                         .opacity(page == Self.lastPage ? 0 : 1)
+                        .accessibilityIdentifier("intro-skip")
                     Spacer()
                     Button(page == Self.lastPage ? "はじめる" : "次へ") {
                         if page == Self.lastPage {

@@ -11,7 +11,8 @@ struct SettingsSheet: View {
 
     var body: some View {
         NavigationStack {
-            // 横画面だと画面幅いっぱいに広がって行が間延びするので、中央に寄せて絞る
+            // 横画面だと画面幅いっぱいに広がって行が間延びするので、中央に寄せて絞る。
+            // 絞ってもスクロールは効く（実機と同じ向きで指を滑らせて確認済み）
             Form {
                 Section {
                     NavigationLink {

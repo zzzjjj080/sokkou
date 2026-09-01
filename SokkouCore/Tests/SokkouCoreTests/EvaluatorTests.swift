@@ -60,7 +60,9 @@ struct EvaluatorTests {
         let keep1s = Tile(.sou, 4)      // 4索を切る = 1索を残す
 
         #expect(eval.option(for: keep4s)?.score == 100)
-        #expect(eval.option(for: keep1s)?.score == 100, "聴牌までの速さは同点")
+        // 聴牌までの速さは同点だが、**100点は最善だけに出す。**
+        // 同じ100点で金色でない牌があると、画面を見た人が理由を探すことになる
+        #expect(eval.option(for: keep1s)?.score == 99)
         #expect(eval.option(for: keep4s)!.improvement > eval.option(for: keep1s)!.improvement,
                 "4索を残すほうが伸びしろが広い")
         #expect(eval.isBest(keep4s), "伸びしろで1索切りが最善")

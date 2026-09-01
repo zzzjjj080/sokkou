@@ -72,6 +72,7 @@ struct ReviewView: View {
                 .font(.system(size: 20, weight: .heavy))
                 .buttonStyle(.borderedProminent)
                 .disabled(!session.hasAnswered)
+                .accessibilityIdentifier("review-next")
             }
             .padding(.horizontal, 20)
         }
@@ -112,6 +113,7 @@ struct ReviewView: View {
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
             Button("閉じる") { finish() }
+                .accessibilityIdentifier("review-close")
                 .font(.system(size: 19, weight: .heavy))
                 .buttonStyle(.borderedProminent)
                 .padding(.top, 6)

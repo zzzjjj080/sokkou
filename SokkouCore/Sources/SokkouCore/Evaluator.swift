@@ -358,17 +358,38 @@ public final class Evaluator {
 
         let correct = pool.filter { points($0.probability) >= Self.okScore }
 
+        // **100点は最善だけに出す。**
+        //
+        // 素点のままだと2つのずれが出る。
+        // ・完全同点を「残した牌の伸びしろ」で絞ったとき、負けた側も四捨五入で100になる
+        // ・逆に同格が並ぶ局面では、最善なのに98や99と出る
+        // どちらも「100点＝金色＝最善」を崩し、画面を見た人が理由を探すことになる。
+        // 最善はそろって100点、それ以外は最大99点にそろえる。
+        let bestTileSet = Set(bestRows.map(\.tile))
+
         func option(_ r: Row) -> DiscardOption {
-            DiscardOption(
+            let score: Int?
+            if r.shanten != minShanten {
+                score = nil
+            } else if bestTileSet.contains(r.tile) {
+                score = 100
+            } else {
+                score = min(points(r.probability), 99)
+            }
+            return DiscardOption(
                 tile: r.tile,
                 shanten: r.shanten,
                 ukeire: r.ukeire,
                 improvement: r.improvement,
-                score: r.shanten == minShanten ? points(r.probability) : nil
+                score: score
             )
         }
-        // 採点対象を点数順に、戻しは下へまとめる
-        let scored = pool.sorted { $0.probability > $1.probability }.map(option)
+        // 採点対象を点数順に、戻しは下へまとめる。
+        // **確率順ではなく点数順に並べる。** 完全同点を伸びしろで分けたとき、
+        // 確率だけで並べると99点の牌が100点より前に来てしまう
+        let scored = pool.map(option).sorted {
+            ($0.score ?? 0, $0.ukeireCount) > ($1.score ?? 0, $1.ukeireCount)
+        }
         let back = rows.filter { $0.shanten > minShanten }
             .sorted { ($0.shanten, -$0.ukeire.reduce(0) { $0 + $1.count })
                     < ($1.shanten, -$1.ukeire.reduce(0) { $0 + $1.count }) }
