@@ -34,7 +34,7 @@ xcodebuild test -project Sokkou/Sokkou.xcodeproj -scheme Sokkou \
 RAW="$OUT/coffee-tip.png"
 [ -f "$RAW" ] || { echo "撮れていません。テストの出力を見てください。"; exit 1; }
 
-# 横倒しを起こす。すでに横長なら触らない
+# ① 横倒しを起こす。人が見て確かめる用
 W=$(sips -g pixelWidth "$RAW" | awk '/pixelWidth/{print $2}')
 H=$(sips -g pixelHeight "$RAW" | awk '/pixelHeight/{print $2}')
 FINAL="$OUT/coffee-tip-review.png"
@@ -43,7 +43,16 @@ if [ "$H" -gt "$W" ]; then
 else
   cp "$RAW" "$FINAL"
 fi
+
+# ② 送る用。**Apple は受け取った画を反時計回りに90度回す。**
+# そのまま上向きで送ると、向こうで横倒しになる。先に時計回りへ回して打ち消す。
+# 縦横の寸法は端末の画面サイズと一致していないと IMAGE_INCORRECT_DIMENSIONS で弾かれる
+# （余白を足して好きな大きさにする、はできない）
+UPLOAD="$OUT/coffee-tip-upload.png"
+sips -r 90 "$FINAL" --out "$UPLOAD" >/dev/null
+
 echo
-echo "できました: $FINAL"
-sips -g pixelWidth -g pixelHeight "$FINAL" | tail -2
-echo "md5: $(md5 -q "$FINAL")"
+echo "人が見る用 : $FINAL"
+echo "Appleに送る : $UPLOAD  ← 登録するのはこちら"
+sips -g pixelWidth -g pixelHeight "$UPLOAD" | tail -2
+echo "md5: $(md5 -q "$UPLOAD")"
