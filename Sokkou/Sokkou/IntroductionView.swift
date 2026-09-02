@@ -88,7 +88,7 @@ struct IntroductionView: View {
                 sample(Tile(.sou, 3), "71", Palette.neutralFill, Palette.onFill, "遅い")
                 sample(Tile(.man, 9), "戻し", Palette.backFill, Palette.onFill, "対象外")
             }
-            line("切ったあと、**すべての牌に点数**が付きます。最善が2つ以上のこともあります。")
+            line("切ったあと、**すべての牌に点数**が付きます。**100点（金色）は必ず1枚**です。")
             small("「戻し」は聴牌から遠ざかる打牌。速さだけでは良し悪しを決められないので、"
                   + "点数を付けずに採点から外しています。")
         }

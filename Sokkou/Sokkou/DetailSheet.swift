@@ -85,7 +85,7 @@ struct DetailSheet: View {
 
     /// 差がどこから来ているのかを一言で
     private func reason(mine: DiscardOption, best: DiscardOption) -> String {
-        let names = evaluation.bestTiles.map(\.description).joined(separator: "・")
+        let names = evaluation.bestTiles.map(\.description).joined(separator: "・")   // 必ず1枚
         if mine.isShantenBack {
             return "\(mine.tile)を切ると\(shantenLabel(mine.shanten))に戻ります。"
                 + "この計算はシャンテン数をまたぐ比較を外すことが実測で分かっているため、"
@@ -149,7 +149,8 @@ struct DetailSheet: View {
     private func mark(_ option: DiscardOption) -> String {
         if option.isShantenBack { return "戻し（対象外）" }
         if evaluation.isBest(option.tile) {
-            return evaluation.isTiedTop && evaluation.bestTiles.count > 1 ? "◎ 最善（同格）" : "◎ 最善"
+            // 100点は必ず1枚。ただし僅差で決めた回はそう断っておく
+            return evaluation.isTiedTop ? "◎ 最善（僅差）" : "◎ 最善"
         }
         if evaluation.isCorrect(option.tile) { return "○ 正解圏" }
         return ""

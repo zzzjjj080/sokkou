@@ -63,3 +63,45 @@ struct ScoreInvariantTests {
         }
     }
 }
+
+/// 100点は必ず1種類だけ。
+///
+/// 同格を並べて出すと「100点が2つある」ことになり、
+/// 100点＝いちばん速い1枚 という読み方が崩れる。
+struct SingleHundredTests {
+
+    let evaluator = Evaluator()
+
+    func hands(count: Int) -> [TileCounts] {
+        ScoreInvariantTests().hands(count: count)
+    }
+
+    @Test("100点はどの局面でもちょうど1種類")
+    func exactlyOneHundred() {
+        for hand in hands(count: 400) {
+            let evaluation = evaluator.evaluate(hand: hand)
+            let hundreds = evaluation.options.filter { $0.score == 100 }
+            #expect(hundreds.count == 1, "100点が \(hundreds.count) 種類ある")
+            #expect(evaluation.bestTiles.count == 1, "最善（金色）も1種類")
+        }
+    }
+
+    @Test("同じ手なら毎回同じ牌が最善になる")
+    func isStable() {
+        for hand in hands(count: 80) {
+            let first = evaluator.evaluate(hand: hand).bestTiles
+            #expect(evaluator.evaluate(hand: hand).bestTiles == first)
+        }
+    }
+
+    @Test("100点でない同点の牌は99点以下で、正解のまま")
+    func tiedRunnersUpStayCorrect() {
+        // 1萬2萬6萬6萬8萬9萬 / 2筒3筒4筒 / 1索4索7索8索8索
+        // 1索切りと4索切りは聴牌までの速さが完全同点
+        let eval = evaluator.evaluate(hand: EvaluatorTests.hand("126689m234p14788s"))
+        let keep1s = Tile(.sou, 4)
+        #expect(eval.option(for: keep1s)?.score == 99)
+        #expect(eval.isBest(keep1s) == false)
+        #expect(eval.isCorrect(keep1s), "同点なので正解のまま。止めずに先へ進める")
+    }
+}

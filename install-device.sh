@@ -4,9 +4,16 @@
 set -euo pipefail
 cd "$(dirname "$0")/Sokkou"
 
-# Apple Watch も " connected " に一致してしまうので、iPhone に絞る。
-# ペアリング済みのWatchは "connected (no DDI)" と出るため、それも除く。
-LINE=$(xcrun devicectl list devices | grep '(iPhone' | grep ' connected ' | grep -v 'no DDI' | head -1 || true)
+# 状態の書き方は Xcode の版で変わる（"connected" → "available (paired)"）。
+# **状態の語で絞らず、「使えないもの」を除く**ほうが壊れにくい。
+#   ・Apple Watch も一致してしまうので、モデル欄の "(iPhone" で絞る
+#   ・手放した端末は "unavailable"、ペアリングだけの端末は "no DDI" と出る
+#   ・"unavailable" は "available" を含むので、除いてから拾う
+LINE=$(xcrun devicectl list devices \
+  | grep '(iPhone' \
+  | grep -v 'unavailable' \
+  | grep -v 'no DDI' \
+  | grep -E 'available|connected' | head -1 || true)
 if [ -z "$LINE" ]; then
   echo "繋がっているiPhoneが見つかりません。USBで接続してください。"
   exit 1

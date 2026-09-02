@@ -351,9 +351,26 @@ public final class Evaluator {
             bestRows = candidates
             isTiedTop = false
         } else {
-            // 誤差の範囲に別の候補がいる。この幅では順位が当てにならないので絞らない
+            // 誤差の範囲に別の候補がいる。この幅では順位が当てにならない
             bestRows = near
             isTiedTop = true
+        }
+
+        // **100点（金色）は必ず1種類にする。**
+        //
+        // 同格を並べて出すと「100点が2つある」ことになり、
+        // 100点＝いちばん速い1枚 という読み方が崩れる。
+        // 残りは99点以下に落ちるが、90点以上なら正解のままなので止まらない。
+        //
+        // **絞り込みの順位が当てにならない幅（isTiedTop）でも1枚に決める。**
+        // その場合は根拠が弱いので、詳細の画面に「僅差」と出して断らない。
+        if bestRows.count > 1 {
+            // 速さ → 伸びしろ → 受け入れ枚数 の順で比べ、
+            // それでも並んだら牌の順で決める（同じ手なら毎回同じ答えになるように）
+            func rank(_ r: Row) -> (Double, Int, Int, Int) {
+                (r.probability, r.improvement, r.ukeire.reduce(0) { $0 + $1.count }, -r.tile.index)
+            }
+            bestRows = [bestRows.max { rank($0) < rank($1) }!]
         }
 
         let correct = pool.filter { points($0.probability) >= Self.okScore }
