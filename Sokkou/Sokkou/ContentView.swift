@@ -128,13 +128,31 @@ struct ContentView: View {
     }
 
     private var verdict: some View {
-        Text(verdictText)
-            .font(.system(size: 21, weight: .heavy))
-            .foregroundStyle(verdictColor)
-            .lineLimit(2)
-            .minimumScaleFactor(0.7)
-            .frame(maxWidth: .infinity,
-                   alignment: game.isLeftHanded ? .trailing : .leading)
+        VStack(alignment: game.isLeftHanded ? .trailing : .leading, spacing: 3) {
+            Text(verdictText)
+                .font(.system(size: 21, weight: .heavy))
+                .foregroundStyle(verdictColor)
+                .lineLimit(2)
+                .minimumScaleFactor(0.7)
+            // 詳細を開かなくても「なぜ劣るのか」が分かるように、理由を1行
+            if let why = explanation {
+                Text(why)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                    .accessibilityIdentifier("explanation")
+            }
+        }
+        .frame(maxWidth: .infinity,
+               alignment: game.isLeftHanded ? .trailing : .leading)
+    }
+
+    /// 切った直後だけ出す。局が終わった画面や未回答では出さない
+    private var explanation: String? {
+        guard game.phase == .afterDiscard, !game.isBusy,
+              let evaluation = game.evaluation, let chosen = game.chosen else { return nil }
+        return Explanation.oneLiner(chosen: chosen, in: evaluation)
     }
 
     private var sideButtons: some View {

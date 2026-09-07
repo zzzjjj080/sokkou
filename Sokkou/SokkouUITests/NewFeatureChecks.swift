@@ -160,6 +160,9 @@ final class NewFeatureChecks: XCTestCase {
         skipIntroduction(app)
 
         XCTAssertTrue(discardMissTile(app), "わざと外せること")
+        // 外したら、詳細を開かなくても理由が1行出ること
+        XCTAssertTrue(app.staticTexts["explanation"].firstMatch.waitForExistence(timeout: 5),
+                      "外した理由の一言が出ていない")
         save("04-scored")
 
         // 外した打牌で聴牌して局が終わると、歯車のある画面から離れる。
@@ -204,6 +207,9 @@ final class NewFeatureChecks: XCTestCase {
             }
         }
         XCTAssertTrue(tapped, "復習の画面で牌を選べること")
+        // 仕込んだ局面で1萬(tile-0)を切ると最善ではないので、理由の一言が出る
+        XCTAssertTrue(app.staticTexts["explanation"].firstMatch.waitForExistence(timeout: 5),
+                      "復習でも理由の一言が出ること")
         save("07-review-answered")
         XCTAssertTrue(next.isEnabled, "答えたら進めること")
         next.tap()

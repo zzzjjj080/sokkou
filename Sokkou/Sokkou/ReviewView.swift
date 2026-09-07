@@ -61,11 +61,21 @@ struct ReviewView: View {
             Spacer(minLength: 4)
 
             HStack(spacing: 14) {
-                Text(verdict)
-                    .font(.system(size: 20, weight: .heavy))
-                    .foregroundStyle(verdictColor)
-                    .lineLimit(2).minimumScaleFactor(0.7)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(verdict)
+                        .font(.system(size: 20, weight: .heavy))
+                        .foregroundStyle(verdictColor)
+                        .lineLimit(2).minimumScaleFactor(0.7)
+                    if let chosen = session.chosen, let evaluation = session.evaluation,
+                       let why = Explanation.oneLiner(chosen: chosen, in: evaluation) {
+                        Text(why)
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1).minimumScaleFactor(0.75)
+                            .accessibilityIdentifier("explanation")
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
                 Button(session.position == session.total ? "結果を見る" : "次の局面へ") {
                     session.next()
                 }
