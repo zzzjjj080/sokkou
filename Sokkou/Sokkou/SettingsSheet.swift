@@ -27,9 +27,12 @@ struct SettingsSheet: View {
                     }
                 }
                 Section {
-                    if let session = game.makeReviewSession() {
+                    if game.reviewStore.isEmpty {
+                        LabeledContent("間違えた局面を復習", value: "まだありません")
+                            .foregroundStyle(.secondary)
+                    } else {
                         NavigationLink {
-                            ReviewView(game: game, session: session)
+                            ReviewStartView(game: game)
                         } label: {
                             HStack {
                                 Text("間違えた局面を復習")
@@ -38,11 +41,6 @@ struct SettingsSheet: View {
                             }
                         }
                         .accessibilityIdentifier("review-link")
-                    } else {
-                        LabeledContent("間違えた局面を復習", value: "まだありません")
-                            .foregroundStyle(.secondary)
-                    }
-                    if !game.reviewStore.isEmpty {
                         Button("復習の一覧を空にする", role: .destructive) {
                             showsReviewClearConfirmation = true
                         }
@@ -50,8 +48,13 @@ struct SettingsSheet: View {
                 } header: {
                     Text("復習")
                 } footer: {
-                    Text("正解できなかった局面を、新しいものから最大\(ReviewStore.capacity)件まで残します。"
-                         + "復習で正解できた局面は一覧から外れます。")
+                    if let top = game.reviewStore.topTag {
+                        Text("いちばん多く外しているのは**\(top.tag.label)**（\(top.count)件）。"
+                             + "形で絞って解き直せます。")
+                    } else {
+                        Text("正解できなかった局面を、新しいものから最大\(ReviewStore.capacity)件まで残します。"
+                             + "復習で正解できた局面は一覧から外れます。")
+                    }
                 }
                 Section("練習") {
                     Toggle("ヒント: 切る候補を5つに絞る", isOn: $game.showsHint)

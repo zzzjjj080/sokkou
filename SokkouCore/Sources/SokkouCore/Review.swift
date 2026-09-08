@@ -11,11 +11,14 @@ public struct ReviewPosition: Equatable, Sendable, Codable, Identifiable {
     public let drawn: Int
     /// そのとき自分が選んだ牌
     public let chosen: Int
+    /// どんな形で外したか。**古い記録には入っていないので省略可**
+    public let tag: WeaknessTag?
 
-    public init(hand: [Int], drawn: Int, chosen: Int) {
+    public init(hand: [Int], drawn: Int, chosen: Int, tag: WeaknessTag? = nil) {
         self.hand = hand.sorted()
         self.drawn = drawn
         self.chosen = chosen
+        self.tag = tag
     }
 
     /// 同じ14枚なら同じ局面とみなす。選んだ牌は区別に使わない
@@ -66,6 +69,31 @@ public struct ReviewStore: Equatable, Sendable, Codable {
     }
 
     public mutating func removeAll() { positions.removeAll() }
+
+    /// 形ごとの件数。分類の付いていない古い記録は数えない
+    public var tagCounts: [WeaknessTag: Int] {
+        positions.reduce(into: [:]) { counts, position in
+            if let tag = position.tag { counts[tag, default: 0] += 1 }
+        }
+    }
+
+    /// いちばん多く外している形。**同数なら表示順で先のもの**
+    /// （出るたびに入れ替わると、見ている人が落ち着かないため）
+    public var topTag: (tag: WeaknessTag, count: Int)? {
+        let counts = tagCounts
+        var best: (tag: WeaknessTag, count: Int)?
+        for tag in WeaknessTag.displayOrder {
+            guard let count = counts[tag] else { continue }
+            if best == nil || count > best!.count { best = (tag, count) }
+        }
+        return best
+    }
+
+    /// 形で絞って新しい順に取り出す。nil ならすべて
+    public func newestFirst(tag: WeaknessTag?) -> [ReviewPosition] {
+        guard let tag else { return newestFirst }
+        return newestFirst.filter { $0.tag == tag }
+    }
 
     // MARK: - Codable（項目を足しても古い記録が読めるようにする）
 

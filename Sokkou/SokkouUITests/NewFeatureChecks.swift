@@ -176,6 +176,17 @@ final class NewFeatureChecks: XCTestCase {
         save("05-settings")
         XCTAssertTrue(element("review-link", in: app).waitForExistence(timeout: 10),
                       "外した局面が復習に入ること")
+
+        // 形で絞れること。外した局面には必ず分類が付く
+        element("review-link", in: app).tap()
+        let all = element("review-all", in: app)
+        XCTAssertTrue(all.waitForExistence(timeout: 10), "復習の入口が出ること")
+        let tagged = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier BEGINSWITH %@", "review-"))
+            .allElementsBoundByIndex
+            .filter { $0.identifier != "review-all" && $0.identifier != "review-link" }
+        XCTAssertFalse(tagged.isEmpty, "形ごとの行が1つは出ること")
+        save("05b-review-tags")
     }
 
     /// 復習の出題から結果までを通す。
@@ -191,6 +202,11 @@ final class NewFeatureChecks: XCTestCase {
         let review = element("review-link", in: app)
         XCTAssertTrue(review.waitForExistence(timeout: 10), "仕込んだ局面が入っていること")
         review.tap()
+        // 入口で形を選べるようになった。ここでは「すべて」から入る
+        let all = element("review-all", in: app)
+        XCTAssertTrue(all.waitForExistence(timeout: 10), "復習の入口が出ること")
+        save("06-review-start")
+        all.tap()
         save("06-review-opened")
 
         let next = app.buttons["review-next"].firstMatch

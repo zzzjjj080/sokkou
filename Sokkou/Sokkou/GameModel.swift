@@ -191,8 +191,15 @@ final class GameModel {
         // あとから復習用の局面を組み立てることはできない
         let missedPosition: ReviewPosition? = evaluation.isCorrect(tile) ? nil
             : round.drawn.map { drawn in
-                ReviewPosition(hand: round.hand.tiles.map(\.index),
-                               drawn: drawn.index, chosen: tile.index)
+                // どんな形で外したかを、切る前の14枚から見て残しておく。
+                // あとから付け直すこともできるが、開くたびに数え直すのは重い
+                let tag = evaluation.bestTiles.first.map {
+                    WeaknessClassifier.tag(hand: fourteen, chosen: tile, best: $0,
+                                           isShantenBack: evaluation.option(for: tile)?
+                                               .isShantenBack ?? false)
+                }
+                return ReviewPosition(hand: round.hand.tiles.map(\.index),
+                                      drawn: drawn.index, chosen: tile.index, tag: tag)
             }
 
         round.discard(tile, isCorrect: isCorrect, isBest: evaluation.isBest(tile),
@@ -235,10 +242,11 @@ final class GameModel {
         }
     }
 
-    /// 復習を始める。局面が無ければ nil
-    func makeReviewSession() -> ReviewSession? {
-        guard !reviewStore.isEmpty else { return nil }
-        return ReviewSession(positions: reviewStore.newestFirst,
+    /// 復習を始める。形で絞れる（nil ならすべて）。局面が無ければ nil
+    func makeReviewSession(tag: WeaknessTag? = nil) -> ReviewSession? {
+        let positions = reviewStore.newestFirst(tag: tag)
+        guard !positions.isEmpty else { return nil }
+        return ReviewSession(positions: positions, tag: tag,
                              shantenCalculator: shantenCalculator,
                              evaluator: evaluator)
     }

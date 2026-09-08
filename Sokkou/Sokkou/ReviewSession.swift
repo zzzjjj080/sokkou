@@ -10,6 +10,8 @@ import SokkouCore
 @Observable
 final class ReviewSession {
     let positions: [ReviewPosition]
+    /// どの形で絞っているか。nil ならすべて
+    let tag: WeaknessTag?
     private let shantenCalculator: ShantenCalculator
     private let evaluator: Evaluator
 
@@ -21,9 +23,11 @@ final class ReviewSession {
     private(set) var missed = 0
 
     init(positions: [ReviewPosition],
+         tag: WeaknessTag? = nil,
          shantenCalculator: ShantenCalculator,
          evaluator: Evaluator) {
         self.positions = positions
+        self.tag = tag
         self.shantenCalculator = shantenCalculator
         self.evaluator = evaluator
         load()
@@ -46,6 +50,9 @@ final class ReviewSession {
 
     /// 前回この局面で選んだ牌
     var previousChoice: Tile? { current?.chosenTile }
+
+    /// いま解いている局面の形
+    var currentTag: WeaknessTag? { current?.tag }
 
     private func load() {
         guard let current, let fourteen = current.fourteen else {

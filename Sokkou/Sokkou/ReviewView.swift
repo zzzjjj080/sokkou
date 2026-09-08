@@ -12,7 +12,7 @@ struct ReviewView: View {
             Palette.background.ignoresSafeArea()
             if session.isFinished { summary } else { question }
         }
-        .navigationTitle("復習")
+        .navigationTitle(session.tag?.label ?? "復習")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
@@ -38,6 +38,13 @@ struct ReviewView: View {
                 Text("正解 \(session.correctCount)")
                     .font(.system(size: 16, weight: .bold)).monospacedDigit()
                     .foregroundStyle(Palette.green)
+                if let tag = session.currentTag {
+                    Text(tag.label)
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(Palette.goldInk)
+                        .padding(.horizontal, 8).padding(.vertical, 3)
+                        .background(Palette.goldFill, in: Capsule())
+                }
                 Spacer()
                 if let previous = session.previousChoice, !session.hasAnswered {
                     Text("前回は \(previous.description) を選んで外しました")
