@@ -366,9 +366,21 @@ public final class Evaluator {
         // その場合は根拠が弱いので、詳細の画面に「僅差」と出して断らない。
         if bestRows.count > 1 {
             // 速さ → 伸びしろ → 受け入れ枚数 の順で比べ、
-            // それでも並んだら牌の順で決める（同じ手なら毎回同じ答えになるように）
-            func rank(_ r: Row) -> (Double, Int, Int, Int) {
-                (r.probability, r.improvement, r.ukeire.reduce(0) { $0 + $1.count }, -r.tile.index)
+            // **それでも並んだら外側の牌を切る。**
+            //
+            // 以前はここで牌の番号が小さいほうを選んでいた。すると
+            // 5萬と8萬が完全に同格のときに「打5萬が100点、打8萬が99点」と出て、
+            // 中張牌を切れと言っているように読めてしまう（6萬と9萬でも同じ）。
+            // 数えたかぎり差が付くのは1点だけだが、金色が付く牌は目立つ。
+            // 実際にどちらでもよいなら、端に近いほうを切るのが定石に合う。
+            //
+            // 最後は牌の順で決める（同じ手なら毎回同じ答えになるように）
+            func rank(_ r: Row) -> (Double, Int, Int, Int, Int) {
+                (r.probability,
+                 r.improvement,
+                 r.ukeire.reduce(0) { $0 + $1.count },
+                 abs(r.tile.number - 5),   // 5から遠いほど外側
+                 -r.tile.index)
             }
             bestRows = [bestRows.max { rank($0) < rank($1) }!]
         }

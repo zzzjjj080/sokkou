@@ -144,4 +144,62 @@ struct EvaluatorTests {
         #expect(Evaluator.lookahead(forShanten: 3) == 8)
         #expect(Evaluator.lookahead(forShanten: 6) == 12, "上限12で頭打ち")
     }
+
+    // MARK: - 完全に同格のときの決め方
+
+    /// **どちらを切っても同じなら、外側の牌を切る。**
+    ///
+    /// 以前は牌の番号が小さいほうを最善にしていた。すると受け入れも伸びしろも
+    /// まったく同じなのに「打5萬が100点、打8萬が99点」と出て、
+    /// 中張牌を切れと言っているように読めてしまう。
+    /// 差は1点だが、金色が付く牌は目立つので実害があった。
+    struct OuterTileWinsTies {
+
+        func evaluate(_ text: String) -> Evaluation {
+            Evaluator().evaluate(hand: ShantenTests.hand(text))
+        }
+
+        @Test("受け入れも伸びしろも同じなら、8萬を切って5萬を残す")
+        func keepsTheFive() {
+            let evaluation = evaluate("58m13589p1123568s")
+            let five = Tile(.man, 5), eight = Tile(.man, 8)
+            guard let a = evaluation.option(for: five),
+                  let b = evaluation.option(for: eight) else {
+                Issue.record("5萬と8萬はどちらも切れるはず"); return
+            }
+            #expect(a.ukeireCount == b.ukeireCount, "受け入れが同じ前提の手")
+            #expect(a.improvement == b.improvement, "伸びしろも同じ前提の手")
+            #expect(evaluation.isBest(eight), "同格なら外側の8萬が最善")
+            #expect(!evaluation.isBest(five), "5萬は残す")
+        }
+
+        @Test("浮き牌が余っているだけの手でも、外側を切る")
+        func keepsTheFiveWhenBothAreSpare() {
+            let evaluation = evaluate("58m556677 89p2367s")
+            #expect(evaluation.isBest(Tile(.man, 8)), "同格なら外側の8萬が最善")
+        }
+
+        @Test("6789萬は、同格なら9萬を切る")
+        func discardsTheNine() {
+            // 6789萬 + 完成した筒子 + 索子の浮き牌。6と9はどちらを切っても同じ形
+            let evaluation = evaluate("6789m123456p1789s")
+            let six = Tile(.man, 6), nine = Tile(.man, 9)
+            guard let a = evaluation.option(for: six),
+                  let b = evaluation.option(for: nine) else {
+                Issue.record("6萬と9萬はどちらも切れるはず"); return
+            }
+            #expect(a.ukeireCount == b.ukeireCount, "受け入れが同じ前提の手")
+            #expect(a.score != nil && b.score != nil, "どちらも採点対象")
+            // 6萬のほうが高くなることはない
+            #expect(a.score! <= b.score!, "同格でも6萬を上に置かない")
+        }
+
+        @Test("同じ手なら毎回同じ答えを返す")
+        func isStable() {
+            let first = evaluate("58m13589p1123568s").bestTiles
+            for _ in 0..<5 {
+                #expect(evaluate("58m13589p1123568s").bestTiles == first)
+            }
+        }
+    }
 }
