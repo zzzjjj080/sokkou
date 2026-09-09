@@ -6,6 +6,8 @@ struct ContentView: View {
     @Bindable var game: GameModel
     @State private var showsDetail = false
     @State private var showsSettings = false
+    /// 局終わりから直接始めた練習
+    @State private var practice: ReviewSession?
 
 
     var body: some View {
@@ -18,7 +20,12 @@ struct ContentView: View {
                     RoundResultView(round: game.round,
                                     records: game.records,
                                     outcome: game.lastOutcome,
-                                    onNext: { game.advance() })
+                                    suggestion: game.practiceSuggestion,
+                                    onNext: { game.advance() },
+                                    onPractice: {
+                                        practice = game.practiceSuggestion
+                                            .flatMap { game.makeReviewSession(tag: $0.tag) }
+                                    })
                 } else {
                     VStack(spacing: 0) {
                         header
@@ -38,6 +45,10 @@ struct ContentView: View {
             }
         }
         .sheet(isPresented: $showsSettings) { SettingsSheet(game: game) }
+        // 局終わりからの練習。設定を経由せず、その形だけをすぐ解ける
+        .sheet(item: $practice) { session in
+            NavigationStack { ReviewView(game: game, session: session) }
+        }
         // 初回だけ全画面で遊び方を出す。設定からいつでも読み直せる
         .fullScreenCover(isPresented: $game.needsIntroduction) {
             IntroductionView { game.needsIntroduction = false }

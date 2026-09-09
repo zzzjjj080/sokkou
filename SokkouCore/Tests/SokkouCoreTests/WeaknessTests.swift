@@ -152,4 +152,34 @@ struct WeaknessTests {
         #expect(store.count == 1)
         #expect(store.positions.first?.tag == nil)
     }
+
+    // MARK: - 壊れた記録
+
+    @Test("14枚にならない記録は使えないと分かる")
+    func rejectsBrokenRecords() {
+        // 27種しかないので、それ以上の番号は牌にならない
+        let broken = ReviewPosition(hand: [0, 1, 5, 5, 7, 8, 10, 11, 12, 18, 21, 24, 99],
+                                    drawn: 25, chosen: 0)
+        #expect(broken.isUsable == false, "牌にならない番号が混じれば弾く")
+
+        let short = ReviewPosition(hand: [0, 1, 2], drawn: 25, chosen: 0)
+        #expect(short.isUsable == false, "枚数が足りなければ弾く")
+
+        let good = ReviewPosition(hand: [0, 1, 5, 5, 7, 8, 10, 11, 12, 18, 21, 24, 25],
+                                  drawn: 25, chosen: 0)
+        #expect(good.isUsable, "まともな記録は通す")
+    }
+
+    @Test("壊れた記録が混ざったJSONも読める")
+    func decodesBrokenRecords() throws {
+        let json = """
+        {"positions":[
+          {"hand":[0,1,5,5,7,8,10,11,12,18,21,24,99],"drawn":25,"chosen":0},
+          {"hand":[0,1,5,5,7,8,10,11,12,18,21,24,25],"drawn":25,"chosen":0}
+        ]}
+        """
+        let store = try JSONDecoder().decode(ReviewStore.self, from: Data(json.utf8))
+        #expect(store.count == 2, "読むところでは落とさない")
+        #expect(store.positions.filter(\.isUsable).count == 1, "使えるのは1件だけ")
+    }
 }

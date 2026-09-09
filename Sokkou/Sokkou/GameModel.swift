@@ -117,6 +117,17 @@ final class GameModel {
             reviewStore.record(ReviewPosition(hand: [0, 1, 5, 5, 7, 8, 10, 11, 12, 18, 21, 24, 25],
                                               drawn: 25, chosen: 0))
         }
+        // 「苦手な形を練習」のボタンが出る状態を作る。
+        // 同じ形で閾値ぶん外していないと勧めないので、まとめて入れる
+        if arguments.contains("-SOKKOU_SEED_WEAK") {
+            // 局面の id は14枚だけで決まるので、**手牌を1枚ずつずらす**。
+            // 同じ14枚を並べても1件に潰れてしまう
+            for offset in 0..<GameModel.practiceThreshold {
+                reviewStore.record(
+                    ReviewPosition(hand: [0, 1, 5, 5, 7, 8, 10, 11, 12, 18, 21, 22 + offset, 25],
+                                   drawn: 25, chosen: 0, tag: .tartsuChoice))
+            }
+        }
         #endif
         drawTile()
     }
@@ -244,11 +255,25 @@ final class GameModel {
 
     /// 復習を始める。形で絞れる（nil ならすべて）。局面が無ければ nil
     func makeReviewSession(tag: WeaknessTag? = nil) -> ReviewSession? {
-        let positions = reviewStore.newestFirst(tag: tag)
+        // 壊れた記録は出さない。採点は14枚が前提で、外れると落ちる
+        let positions = reviewStore.newestFirst(tag: tag).filter(\.isUsable)
         guard !positions.isEmpty else { return nil }
         return ReviewSession(positions: positions, tag: tag,
                              shantenCalculator: shantenCalculator,
                              evaluator: evaluator)
+    }
+
+    /// 練習を勧めるのに要る件数。
+    ///
+    /// 1〜2件で「これが苦手です」と言われても当てにならない。
+    /// **同じ形を何度か外して初めて傾向**なので、少し貯まってから声をかける。
+    static let practiceThreshold = 5
+
+    /// いちばん多く外している形。まだ少ないうちは勧めない
+    var practiceSuggestion: (tag: WeaknessTag, count: Int)? {
+        guard let top = reviewStore.topTag,
+              top.count >= Self.practiceThreshold else { return nil }
+        return top
     }
 
     private func finishRound() {

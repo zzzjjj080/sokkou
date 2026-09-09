@@ -34,6 +34,13 @@ public struct ReviewPosition: Equatable, Sendable, Codable, Identifiable {
         guard let drawnTile else { return nil }
         return TileCounts(handTiles).adding(drawnTile)
     }
+
+    /// 採点にかけられる形か。
+    ///
+    /// 記録はJSONで残るので、**古い版の記録や壊れたファイル**が混ざりうる。
+    /// 採点は14枚であることを前提にしていて、外れると落ちる。
+    /// 復習に出す前にここで弾く
+    public var isUsable: Bool { fourteen?.total == 14 }
 }
 
 /// 外した局面のたまり場。

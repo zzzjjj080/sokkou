@@ -263,4 +263,45 @@ final class NewFeatureChecks: XCTestCase {
                           "設定を入れたら「ツモる」が左へ動くこと")
         save("10-left-handed")
     }
+
+    /// 局が終わった画面から、設定を通らずに苦手な形の練習へ入れること。
+    ///
+    /// 苦手な形が分かっても、設定の奥にあると開かない。
+    /// **思い立った場所から1タップで始められる**ことがこの機能の要点なので、
+    /// 入口が消えたらテストで気づけるようにしておく。
+    func testWeakShapePracticeStartsFromTheRoundResult() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-SOKKOU_RESET", "-SOKKOU_SEED_WEAK"]
+        app.launchEnvironment["SOKKOU_QUICK_TENPAI"] = "1"   // 1打で聴牌まで行く
+        app.launch()
+
+        skipIntroduction(app)
+
+        // 聴牌するまで打っては引くを繰り返す。1シャンテン配牌なので普通は1巡だが、
+        // 引いた牌によっては伸びないことがあるので数巡ぶん粘る
+        let practice = element("practice-weak", in: app)
+        for _ in 0..<8 {
+            if practice.exists { break }
+            // 最善が分からなければ手牌の先頭でよい。進めることが目的
+            let best = app.otherElements.matching(identifier: "tile-best")
+                .allElementsBoundByIndex.first { $0.exists && $0.isHittable }
+            let any = app.otherElements
+                .matching(NSPredicate(format: "identifier BEGINSWITH %@", "tile-"))
+                .allElementsBoundByIndex.first { $0.exists && $0.isHittable }
+            guard let tile = best ?? any else { break }
+            tile.tap()
+            let draw = element("draw", in: app)
+            if draw.waitForExistence(timeout: 10) { draw.tap() }
+        }
+
+        XCTAssertTrue(practice.waitForExistence(timeout: 20),
+                      "局終わりの画面に苦手な形の入口が出ること")
+        save("07-practice-entry")
+
+        practice.tap()
+        // 絞られた形の名前が見出しに出る
+        XCTAssertTrue(app.staticTexts["ターツ選択"].waitForExistence(timeout: 15),
+                      "その形だけの復習が始まること")
+        save("07-practice-opened")
+    }
 }

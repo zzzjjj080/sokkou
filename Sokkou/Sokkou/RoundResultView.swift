@@ -9,7 +9,10 @@ struct RoundResultView: View {
     let round: Round
     let records: Records
     let outcome: RoundOutcome?
+    /// よく外している形。無ければボタンを出さない
+    let suggestion: (tag: WeaknessTag, count: Int)?
     let onNext: () -> Void
+    let onPractice: () -> Void
 
 
     /// この局の打牌数。1巡に1枚切るので巡目と同じ
@@ -32,9 +35,25 @@ struct RoundResultView: View {
                 rankMeter
             }
             Spacer(minLength: 8)
-            HStack {
+            HStack(spacing: 14) {
                 waits
                 Spacer()
+                // 局が終わった直後が、次に何をするか決めるところ。
+                // ここに置かないと、苦手な形の練習は設定の奥に埋まったままになる
+                if let suggestion {
+                    Button(action: onPractice) {
+                        VStack(spacing: 2) {
+                            Text("苦手な形を練習")
+                                .font(.system(size: 18, weight: .heavy))
+                            Text("\(suggestion.tag.label) \(suggestion.count)件")
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundStyle(.secondary)
+                        }
+                        .frame(width: 180, height: 74)
+                    }
+                    .buttonStyle(.bordered)
+                    .accessibilityIdentifier("practice-weak")
+                }
                 Button(action: onNext) {
                     Text("次の局へ")
                         .font(.system(size: 26, weight: .heavy))

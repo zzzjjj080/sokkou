@@ -8,7 +8,7 @@ import SokkouCore
 /// 判定のしかたを変えても、古い局面がそのまま使える。
 @MainActor
 @Observable
-final class ReviewSession {
+final class ReviewSession: Identifiable {
     let positions: [ReviewPosition]
     /// どの形で絞っているか。nil ならすべて
     let tag: WeaknessTag?
@@ -55,7 +55,7 @@ final class ReviewSession {
     var currentTag: WeaknessTag? { current?.tag }
 
     private func load() {
-        guard let current, let fourteen = current.fourteen else {
+        guard let current, current.isUsable, let fourteen = current.fourteen else {
             evaluation = nil
             return
         }
