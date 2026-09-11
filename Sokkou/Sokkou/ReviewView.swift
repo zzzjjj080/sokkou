@@ -5,6 +5,7 @@ import SokkouCore
 struct ReviewView: View {
     @Bindable var game: GameModel
     @State var session: ReviewSession
+    @State private var showsDetail = false
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -17,6 +18,11 @@ struct ReviewView: View {
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
                 Button("終わる") { finish() }
+            }
+        }
+        .sheet(isPresented: $showsDetail) {
+            if let evaluation = session.evaluation, let chosen = session.chosen {
+                DetailSheet(evaluation: evaluation, chosen: chosen)
             }
         }
     }
@@ -83,6 +89,13 @@ struct ReviewView: View {
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
+                // 間違いを見直す場所こそ、全打牌の点数と受け入れが要る。
+                // 本編と同じように詳細を開けるようにする
+                Button("詳細") { showsDetail = true }
+                    .font(.system(size: 17, weight: .bold))
+                    .buttonStyle(.bordered)
+                    .disabled(!session.hasAnswered)
+                    .accessibilityIdentifier("review-detail")
                 Button(session.position == session.total ? "結果を見る" : "次の局面へ") {
                     session.next()
                 }

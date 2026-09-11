@@ -227,6 +227,18 @@ final class NewFeatureChecks: XCTestCase {
         XCTAssertTrue(app.staticTexts["explanation"].firstMatch.waitForExistence(timeout: 5),
                       "復習でも理由の一言が出ること")
         save("07-review-answered")
+
+        // 間違いを見直す場所なので、本編と同じく詳細まで開けること
+        let detail = element("review-detail", in: app)
+        XCTAssertTrue(detail.waitForExistence(timeout: 5), "復習にも詳細のボタンが出ること")
+        detail.tap()
+        XCTAssertTrue(app.staticTexts["すべての打牌"].firstMatch.waitForExistence(timeout: 10),
+                      "詳細の中身が出ること")
+        save("07b-review-detail")
+        // 閉じて元の画面へ戻る
+        app.swipeDown(velocity: .fast)
+
+        XCTAssertTrue(next.waitForExistence(timeout: 10), "詳細を閉じたら復習へ戻ること")
         XCTAssertTrue(next.isEnabled, "答えたら進めること")
         next.tap()
 
