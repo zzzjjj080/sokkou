@@ -80,18 +80,23 @@ struct ContentView: View {
             ExperienceBar(from: game.records.experience, to: game.records.experience,
                           showsTitle: false)
                 .frame(maxWidth: 340)
-            stat("連続", "\(game.records.currentStreak)")
-            stat("最高連続", "\(game.records.bestStreak)")
-            // 巡目は結果の画面に出るので、上段からは外した。
-            // 空いたところに復習の入口を置く。設定の奥だと開かないため
+            Spacer(minLength: 0)
+            // 巡目・連続・最高連続は、どれも聴牌したときの画面に出る。
+            // 打っている間ずっと上段に置くより、復習への入口に使うほうがよい。
+            // **絵柄だけでは何のボタンか分からないので、文字で書く**
             if !game.reviewStore.isEmpty {
                 Button { showsReview = true } label: {
-                    HStack(spacing: 5) {
+                    HStack(spacing: 6) {
                         Image(systemName: "arrow.trianglehead.counterclockwise")
-                            .font(.system(size: 18, weight: .bold))
+                            .font(.system(size: 15, weight: .bold))
+                        Text("復習")
+                            .font(.system(size: 17, weight: .heavy))
                         Text("\(game.reviewStore.count)")
-                            .font(.system(size: 17, weight: .heavy)).monospacedDigit()
+                            .font(.system(size: 15, weight: .heavy)).monospacedDigit()
+                            .foregroundStyle(.secondary)
                     }
+                    .padding(.horizontal, 12).padding(.vertical, 6)
+                    .background(Palette.gold.opacity(0.15), in: Capsule())
                 }
                 .buttonStyle(.plain).foregroundStyle(Palette.gold)
                 .accessibilityIdentifier("review-top")
@@ -102,14 +107,6 @@ struct ContentView: View {
             .buttonStyle(.plain).foregroundStyle(.secondary)
             .accessibilityIdentifier("settings")
         }
-    }
-
-    private func stat(_ label: String, _ value: String) -> some View {
-        VStack(spacing: 2) {
-            Text(value).font(.system(size: 25, weight: .heavy)).monospacedDigit()
-            Text(label).font(.system(size: 12)).foregroundStyle(.secondary)
-        }
-        .frame(minWidth: 74)
     }
 
     // MARK: - 手牌
