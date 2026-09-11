@@ -9,6 +9,7 @@ import SokkouCore
 /// **正方形に近い札を並べて**、どの形が何件あるかを一目で見比べられるようにする。
 struct ReviewStartView: View {
     @Bindable var game: GameModel
+    @State private var showsClearConfirmation = false
 
     /// 横画面の幅なら4列がちょうどよい。狭ければ自動で減る
     private let columns = [GridItem(.adaptive(minimum: 150, maximum: 230), spacing: 12)]
@@ -38,6 +39,21 @@ struct ReviewStartView: View {
         .background(Palette.background.ignoresSafeArea())
         .navigationTitle("復習")
         .navigationBarTitleDisplayMode(.inline)
+        // 一覧を持っている画面で消せるようにする。設定の奥にあると、
+        // 何を消すのかが見えないまま押すことになる
+        .toolbar {
+            ToolbarItem(placement: .destructiveAction) {
+                Button("空にする", role: .destructive) { showsClearConfirmation = true }
+                    .accessibilityIdentifier("review-clear")
+            }
+        }
+        .confirmationDialog("復習の一覧を空にしますか？", isPresented: $showsClearConfirmation,
+                            titleVisibility: .visible) {
+            Button("空にする", role: .destructive) { game.clearReview() }
+            Button("やめる", role: .cancel) {}
+        } message: {
+            Text("ためた\(game.reviewStore.count)件の局面を消します。段位と記録はそのままです。")
+        }
     }
 
     private var counts: [WeaknessTag: Int] { game.reviewStore.tagCounts }

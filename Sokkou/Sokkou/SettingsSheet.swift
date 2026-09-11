@@ -1,108 +1,50 @@
 import SwiftUI
 import SokkouCore
 
+/// 設定。**横画面なので、1行ずつの一覧だと横に間延びする。**
+/// 復習の入口と同じように、札を並べて一目で見渡せるようにしてある。
+///
+/// 長い説明と投げ銭は「このアプリについて」の奥へ入れた。
+/// 設定の入口に文章が並ぶと、何を触れるのかが埋もれる。
 struct SettingsSheet: View {
     @Bindable var game: GameModel
     @Environment(\.dismiss) private var dismiss
     @State private var showsResetConfirmation = false
-    @State private var showsReviewClearConfirmation = false
     @State private var showsIntroduction = false
     @State private var tipJar = TipJar(productID: TipJar.productID)
 
+    private let columns = [GridItem(.adaptive(minimum: 150, maximum: 230), spacing: 12)]
+
     var body: some View {
         NavigationStack {
-            // 横画面だと画面幅いっぱいに広がって行が間延びするので、中央に寄せて絞る。
-            // 絞ってもスクロールは効く（実機と同じ向きで指を滑らせて確認済み）
-            Form {
-                Section {
-                    NavigationLink {
-                        RankListView(records: game.records)
-                    } label: {
-                        HStack {
-                            Text("段位一覧")
-                            Spacer()
-                            Text(game.records.rank?.display ?? "称号なし")
-                                .foregroundStyle(.secondary)
-                        }
+            ScrollView {
+                LazyVGrid(columns: columns, spacing: 12) {
+                    rankCard
+                    reviewCard
+                    toggleCard("ヒント", "切る候補を5つに絞る",
+                               systemImage: "sparkles", isOn: $game.showsHint)
+                    toggleCard("ツモるを左に", "左手で持つとき",
+                               systemImage: "hand.point.left.fill", isOn: $game.isLeftHanded,
+                               identifier: "left-handed")
+                    toggleCard("振動する", "押したとき・判定・昇格",
+                               systemImage: "iphone.radiowaves.left.and.right",
+                               isOn: $game.hapticsEnabled)
+                    actionCard("遊び方", "もう一度見る", systemImage: "book.fill") {
+                        showsIntroduction = true
                     }
-                }
-                Section {
-                    if game.reviewStore.isEmpty {
-                        LabeledContent("間違えた局面を復習", value: "まだありません")
-                            .foregroundStyle(.secondary)
-                    } else {
-                        NavigationLink {
-                            ReviewStartView(game: game)
-                        } label: {
-                            HStack {
-                                Text("間違えた局面を復習")
-                                Spacer()
-                                Text("\(game.reviewStore.count)件").foregroundStyle(.secondary)
-                            }
-                        }
-                        .accessibilityIdentifier("review-link")
-                        Button("復習の一覧を空にする", role: .destructive) {
-                            showsReviewClearConfirmation = true
-                        }
+                    navigationCard("このアプリについて", "判定の決まりと連絡先",
+                                   systemImage: "info.circle.fill") {
+                        AboutView(game: game, tipJar: tipJar)
                     }
-                } header: {
-                    Text("復習")
-                } footer: {
-                    if let top = game.reviewStore.topTag {
-                        Text("いちばん多く外しているのは**\(top.tag.label)**（\(top.count)件）。"
-                             + "形で絞って解き直せます。")
-                    } else {
-                        Text("正解できなかった局面を、新しいものから最大\(ReviewStore.capacity)件まで残します。"
-                             + "復習で正解できた局面は一覧から外れます。")
-                    }
-                }
-                Section("練習") {
-                    Toggle("ヒント: 切る候補を5つに絞る", isOn: $game.showsHint)
-                }
-                Section {
-                    Toggle("「ツモる」を左に置く", isOn: $game.isLeftHanded)
-                        .accessibilityIdentifier("left-handed")
-                } header: {
-                    Text("持ち方")
-                } footer: {
-                    Text("左手で持つときに、いちばん押すボタンを親指側へ移します。")
-                }
-                Section {
-                    Toggle("振動する", isOn: $game.hapticsEnabled)
-                } header: {
-                    Text("手ごたえ")
-                } footer: {
-                    Text("牌を押したとき、判定が出たとき、昇格したときに強さを変えて振動します。")
-                }
-                Section {
-                    Button("記録をすべて消す", role: .destructive) {
+                    actionCard("記録を消す", "称号も最初から",
+                               systemImage: "arrow.counterclockwise", isDestructive: true) {
                         showsResetConfirmation = true
                     }
-                } header: {
-                    Text("記録")
-                } footer: {
-                    Text("最速聴牌の累計 \(game.records.fastestCount)回 / 最高連続 \(game.records.bestStreak)回。"
-                         + "消すと称号も最初からになります。")
                 }
-                Section {
-                    Button("遊び方をもう一度見る") { showsIntroduction = true }
-                    LabeledContent("判定", value: "最善を100点として採点")
-                    LabeledContent("正解", value: "90点以上")
-                } header: {
-                    Text("このアプリについて")
-                } footer: {
-                    Text("打点・役・ドラ・場況・待ちの良し悪しは考慮しません。"
-                         + "字牌と赤5は使わず、七対子も考えません。\n\n"
-                         + "ツモは約4割の確率で手が進む牌を引きます。1局を短くするための調整で、"
-                         + "実戦より早く聴牌します。聴牌したときに出る待ちの枚数と確率は"
-                         + "調整なしの計算なので、そのまま実戦の目安に使えます。")
-                }
-
-                FeedbackSection()
-                CoffeeTipSection(tipJar: tipJar)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 8)
             }
-            .frame(maxWidth: 640)
-            .frame(maxWidth: .infinity)
+            .background(Palette.background.ignoresSafeArea())
             .navigationTitle("設定")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -115,16 +57,161 @@ struct SettingsSheet: View {
             } message: {
                 Text("最速聴牌の累計・連続記録・称号がすべて最初からになります。元に戻せません。")
             }
-            .confirmationDialog("復習の一覧を空にしますか？", isPresented: $showsReviewClearConfirmation,
-                                titleVisibility: .visible) {
-                Button("空にする", role: .destructive) { game.clearReview() }
-                Button("やめる", role: .cancel) {}
-            } message: {
-                Text("ためた\(game.reviewStore.count)件の局面を消します。段位と記録はそのままです。")
-            }
             .fullScreenCover(isPresented: $showsIntroduction) {
                 IntroductionView { showsIntroduction = false }
             }
         }
+    }
+
+    // MARK: - 札
+
+    private var rankCard: some View {
+        navigationCard("段位一覧", game.records.rank?.display ?? "称号なし",
+                       systemImage: "rosette") {
+            RankListView(records: game.records)
+        }
+    }
+
+    @ViewBuilder
+    private var reviewCard: some View {
+        if game.reviewStore.isEmpty {
+            SettingsCard(title: "復習", detail: "まだありません",
+                         systemImage: "arrow.trianglehead.counterclockwise",
+                         style: .disabled)
+        } else {
+            navigationCard("復習", "\(game.reviewStore.count)件",
+                           systemImage: "arrow.trianglehead.counterclockwise",
+                           style: .highlighted, identifier: "review-link") {
+                ReviewStartView(game: game)
+            }
+        }
+    }
+
+    private func navigationCard<Destination: View>(
+        _ title: String, _ detail: String, systemImage: String,
+        style: SettingsCard.Style = .plain, identifier: String? = nil,
+        @ViewBuilder destination: () -> Destination
+    ) -> some View {
+        NavigationLink { destination() } label: {
+            SettingsCard(title: title, detail: detail, systemImage: systemImage, style: style)
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier(identifier ?? title)
+    }
+
+    private func actionCard(_ title: String, _ detail: String, systemImage: String,
+                            isDestructive: Bool = false,
+                            action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            SettingsCard(title: title, detail: detail, systemImage: systemImage,
+                         style: isDestructive ? .destructive : .plain)
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier(title)
+    }
+
+    /// 入り切りの札。**札ごと押して切り替える。**
+    /// 小さなスイッチを狙わせるより、札全体が的のほうが押しやすい
+    private func toggleCard(_ title: String, _ detail: String, systemImage: String,
+                            isOn: Binding<Bool>, identifier: String? = nil) -> some View {
+        Button { isOn.wrappedValue.toggle() } label: {
+            SettingsCard(title: title, detail: detail, systemImage: systemImage,
+                         style: isOn.wrappedValue ? .on : .off)
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier(identifier ?? title)
+        .accessibilityValue(isOn.wrappedValue ? "オン" : "オフ")
+    }
+}
+
+/// 設定の札1枚。復習の入口と同じ寸法にそろえてある
+struct SettingsCard: View {
+    enum Style { case plain, highlighted, on, off, destructive, disabled }
+
+    let title: String
+    let detail: String
+    let systemImage: String
+    var style: Style = .plain
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 6) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 16, weight: .bold))
+                Spacer(minLength: 0)
+                if style == .on || style == .off {
+                    Text(style == .on ? "オン" : "オフ")
+                        .font(.system(size: 12, weight: .heavy))
+                        .foregroundStyle(style == .on ? Palette.goldInk : Color.secondary)
+                        .padding(.horizontal, 8).padding(.vertical, 3)
+                        .background(style == .on ? Palette.goldFill : Palette.neutralFill,
+                                    in: Capsule())
+                }
+            }
+            .foregroundStyle(accent)
+            Spacer(minLength: 0)
+            Text(title)
+                .font(.system(size: 17, weight: .heavy))
+                .foregroundStyle(style == .disabled ? .secondary : .primary)
+                .lineLimit(2).minimumScaleFactor(0.7)
+            Text(detail)
+                .font(.system(size: 13))
+                .foregroundStyle(.secondary)
+                .lineLimit(2).minimumScaleFactor(0.8)
+        }
+        .multilineTextAlignment(.leading)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .aspectRatio(1.35, contentMode: .fit)
+        .background(background, in: RoundedRectangle(cornerRadius: 18))
+        .overlay(RoundedRectangle(cornerRadius: 18)
+            .stroke(style == .on ? Palette.gold.opacity(0.5) : .clear, lineWidth: 1.5))
+        .opacity(style == .disabled ? 0.55 : 1)
+    }
+
+    private var accent: Color {
+        switch style {
+        case .destructive: Palette.miss
+        case .on, .highlighted: Palette.gold
+        default: .secondary
+        }
+    }
+
+    private var background: Color {
+        style == .highlighted ? Palette.gold.opacity(0.18) : Palette.panel
+    }
+}
+
+/// 長い説明・連絡先・投げ銭。**設定の入口から1つ奥へ。**
+/// `CoffeeTipSection` は `Form` の中で使う部品なので、ここは一覧のままにする
+struct AboutView: View {
+    @Bindable var game: GameModel
+    @Bindable var tipJar: TipJar
+
+    var body: some View {
+        Form {
+            Section {
+                LabeledContent("判定", value: "最善を100点として採点")
+                LabeledContent("正解", value: "90点以上")
+            } footer: {
+                Text("打点・役・ドラ・場況・待ちの良し悪しは考慮しません。"
+                     + "字牌と赤5は使わず、七対子も考えません。\n\n"
+                     + "ツモは約4割の確率で手が進む牌を引きます。1局を短くするための調整で、"
+                     + "実戦より早く聴牌します。聴牌したときに出る待ちの枚数と確率は"
+                     + "調整なしの計算なので、そのまま実戦の目安に使えます。")
+            }
+            Section {
+                LabeledContent("最速聴牌", value: "累計 \(game.records.fastestCount)回")
+                LabeledContent("最高連続", value: "\(game.records.bestStreak)回")
+            } header: {
+                Text("記録")
+            }
+            FeedbackSection()
+            CoffeeTipSection(tipJar: tipJar)
+        }
+        .frame(maxWidth: 640)
+        .frame(maxWidth: .infinity)
+        .navigationTitle("このアプリについて")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
