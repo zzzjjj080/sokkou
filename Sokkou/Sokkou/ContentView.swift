@@ -30,13 +30,11 @@ struct ContentView: View {
                 } else {
                     VStack(spacing: 0) {
                         header
-                        // 判定と理由は**手牌の上**に置く。
-                        // 下の隅にあると、牌を見てから目を大きく動かすことになる
-                        verdict
-                            .padding(.top, 10)
-                        // 下の余白を頭打ちにすると、上の余白が残りを吸って
-                        // 手牌が画面の中央より少し下に来る
+                        // 上の余白が残りを吸うので、手牌は画面の中央より少し下に来る
                         Spacer(minLength: 8)
+                        // 判定と理由は**手牌のすぐ上**。牌から目を動かさずに読める
+                        verdict
+                            .padding(.bottom, 6)
                         handRow
                         Spacer(minLength: 8).frame(maxHeight: 20)
                         bottomRow
@@ -155,36 +153,37 @@ struct ContentView: View {
             if game.isLeftHanded {
                 drawButton
                 sideButtons
-                Spacer(minLength: 0)
+                summary
             } else {
-                Spacer(minLength: 0)
+                summary
                 sideButtons
                 drawButton
             }
         }
     }
 
-    /// 判定と、なぜ劣るのかの一言。**手牌の上に出す。**
+    /// 判定と、なぜ劣るのかの一言。**手牌のすぐ上に、牌と同じ幅で中央に出す。**
+    /// 隅に置くと牌から目を大きく動かすことになる
     private var verdict: some View {
-        VStack(alignment: game.isLeftHanded ? .trailing : .leading, spacing: 3) {
+        VStack(spacing: 3) {
             Text(verdictText)
-                .font(.system(size: 21, weight: .heavy))
+                .font(.system(size: 26, weight: .heavy))
                 .foregroundStyle(verdictColor)
                 .lineLimit(2)
                 .minimumScaleFactor(0.7)
             // 詳細を開かなくても「なぜ劣るのか」が分かるように、理由を1行
             if let why = explanation {
                 Text(why)
-                    .font(.system(size: 17, weight: .semibold))
+                    .font(.system(size: 20, weight: .semibold))
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
                     .minimumScaleFactor(0.75)
                     .accessibilityIdentifier("explanation")
             }
         }
+        .multilineTextAlignment(.center)
         // 文字が無いときも高さを保つ。出た瞬間に手牌が跳ねないようにする
-        .frame(maxWidth: .infinity, minHeight: 52,
-               alignment: game.isLeftHanded ? .topTrailing : .topLeading)
+        .frame(maxWidth: .infinity, minHeight: 62, alignment: .bottom)
     }
 
     /// 切った直後だけ出す。局が終わった画面や未回答では出さない
@@ -192,6 +191,57 @@ struct ContentView: View {
         guard game.phase == .afterDiscard, !game.isBusy,
               let evaluation = game.evaluation, let chosen = game.chosen else { return nil }
         return Explanation.oneLiner(chosen: chosen, in: evaluation)
+    }
+
+    /// 外したときだけ、**「ツモる」の反対側の空きに**詳細の抜粋を出す。
+    ///
+    /// 詳細を開かないと数字が見られないと、なぜ劣るのかが分からないまま次へ進む。
+    /// 押せば詳細がそのまま開く
+    @ViewBuilder
+    private var summary: some View {
+        if let evaluation = game.evaluation, let chosen = game.chosen,
+           !game.isBusy, game.phase == .afterDiscard,
+           !evaluation.isBest(chosen),
+           let mine = evaluation.option(for: chosen),
+           let best = evaluation.bestTiles.first.flatMap({ evaluation.option(for: $0) }) {
+            Button { showsDetail = true } label: {
+                VStack(spacing: 3) {
+                    summaryRow("", "\(mine.tile)切り", "\(best.tile)切り", isHeader: true)
+                    summaryRow("向聴", shantenLabel(mine.shanten), shantenLabel(best.shanten))
+                    summaryRow("受け入れ", "\(mine.ukeireCount)枚", "\(best.ukeireCount)枚")
+                    summaryRow("伸びしろ", "\(mine.improvement)枚", "\(best.improvement)枚")
+                }
+                .padding(.horizontal, 12).padding(.vertical, 8)
+                .background(Palette.faintFill, in: RoundedRectangle(cornerRadius: 12))
+                .overlay(RoundedRectangle(cornerRadius: 12)
+                    .stroke(Palette.hairline, lineWidth: 1))
+                .fixedSize()
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("summary")
+            .frame(maxWidth: .infinity,
+                   alignment: game.isLeftHanded ? .trailing : .leading)
+        } else {
+            Spacer(minLength: 0)
+        }
+    }
+
+    private func summaryRow(_ label: String, _ mine: String, _ best: String,
+                            isHeader: Bool = false) -> some View {
+        HStack(spacing: 10) {
+            Text(label)
+                .font(.system(size: 13))
+                .foregroundStyle(.secondary)
+                .frame(width: 60, alignment: .leading)
+            Text(mine)
+                .font(.system(size: isHeader ? 13 : 16, weight: isHeader ? .bold : .semibold))
+                .foregroundStyle(isHeader ? Palette.chosen : .primary)
+                .frame(width: 68, alignment: .trailing)
+            Text(best)
+                .font(.system(size: isHeader ? 13 : 16, weight: .bold))
+                .foregroundStyle(isHeader ? Palette.gold : Palette.green)
+                .frame(width: 68, alignment: .trailing)
+        }
     }
 
     private var sideButtons: some View {
