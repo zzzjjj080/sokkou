@@ -30,9 +30,15 @@ struct ContentView: View {
                 } else {
                     VStack(spacing: 0) {
                         header
-                        Spacer(minLength: 4)
-                        handRow    // 上下に Spacer を置いて画面の中央に来るようにする
-                        Spacer(minLength: 4)
+                        // 判定と理由は**手牌の上**に置く。
+                        // 下の隅にあると、牌を見てから目を大きく動かすことになる
+                        verdict
+                            .padding(.top, 10)
+                        // 下の余白を頭打ちにすると、上の余白が残りを吸って
+                        // 手牌が画面の中央より少し下に来る
+                        Spacer(minLength: 8)
+                        handRow
+                        Spacer(minLength: 8).frame(maxHeight: 20)
                         bottomRow
                     }
                 }
@@ -149,15 +155,16 @@ struct ContentView: View {
             if game.isLeftHanded {
                 drawButton
                 sideButtons
-                verdict
+                Spacer(minLength: 0)
             } else {
-                verdict
+                Spacer(minLength: 0)
                 sideButtons
                 drawButton
             }
         }
     }
 
+    /// 判定と、なぜ劣るのかの一言。**手牌の上に出す。**
     private var verdict: some View {
         VStack(alignment: game.isLeftHanded ? .trailing : .leading, spacing: 3) {
             Text(verdictText)
@@ -170,13 +177,14 @@ struct ContentView: View {
                 Text(why)
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                    .lineLimit(2)
                     .minimumScaleFactor(0.75)
                     .accessibilityIdentifier("explanation")
             }
         }
-        .frame(maxWidth: .infinity,
-               alignment: game.isLeftHanded ? .trailing : .leading)
+        // 文字が無いときも高さを保つ。出た瞬間に手牌が跳ねないようにする
+        .frame(maxWidth: .infinity, minHeight: 52,
+               alignment: game.isLeftHanded ? .topTrailing : .topLeading)
     }
 
     /// 切った直後だけ出す。局が終わった画面や未回答では出さない

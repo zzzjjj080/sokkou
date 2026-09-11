@@ -11,6 +11,7 @@ struct SettingsSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var showsResetConfirmation = false
     @State private var showsIntroduction = false
+    @State private var showsCoffee = false
     @State private var tipJar = TipJar(productID: TipJar.productID)
 
     private let columns = [GridItem(.adaptive(minimum: 150, maximum: 230), spacing: 12)]
@@ -32,14 +33,14 @@ struct SettingsSheet: View {
                     actionCard("遊び方", "もう一度見る", systemImage: "book.fill") {
                         showsIntroduction = true
                     }
-                    navigationCard("このアプリについて", "判定の決まりと連絡先",
-                                   systemImage: "info.circle.fill") {
-                        AboutView(game: game, tipJar: tipJar)
+                    // 記録を消すはめったに使わないので、この奥へまとめた
+                    navigationCard("その他", "判定の決まり・連絡先・記録",
+                                   systemImage: "ellipsis.circle.fill") {
+                        AboutView(game: game, tipJar: tipJar,
+                                  onReset: { showsResetConfirmation = true })
                     }
-                    actionCard("記録を消す", "称号も最初から",
-                               systemImage: "arrow.counterclockwise", isDestructive: true) {
-                        showsResetConfirmation = true
-                    }
+                    // 最後の1枚。押してもらえるよう、いちばん目が止まる右下に置く
+                    coffeeCard
                 }
                 .padding(.horizontal, 20)
                 .padding(.vertical, 8)
@@ -60,10 +61,38 @@ struct SettingsSheet: View {
             .fullScreenCover(isPresented: $showsIntroduction) {
                 IntroductionView { showsIntroduction = false }
             }
+            // CoffeeTipSection は Form の中で使う部品なので、シートも一覧で作る
+            .sheet(isPresented: $showsCoffee) {
+                NavigationStack {
+                    Form { CoffeeTipSection(tipJar: tipJar) }
+                        .frame(maxWidth: 640).frame(maxWidth: .infinity)
+                        .navigationTitle("コーヒーを奢る")
+                        .navigationBarTitleDisplayMode(.inline)
+                        .toolbar {
+                            ToolbarItem(placement: .confirmationAction) {
+                                Button("閉じる") { showsCoffee = false }
+                            }
+                        }
+                }
+            }
         }
     }
 
     // MARK: - 札
+
+    /// 投げ銭。**設定の最後の1枚**として、いちばん目が止まる右下に置く。
+    /// 一覧の奥に埋めると、そもそも見つからない
+    private var coffeeCard: some View {
+        Button { showsCoffee = true } label: {
+            SettingsCard(title: "コーヒーを奢る",
+                         detail: tipJar.cups > 0 ? "\(tipJar.cups)杯 ありがとうございます"
+                                                 : "気に入ったら開発者に",
+                         systemImage: "cup.and.saucer.fill",
+                         style: .coffee)
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("coffee")
+    }
 
     private var rankCard: some View {
         navigationCard("段位一覧", game.records.rank?.display ?? "称号なし",
@@ -126,7 +155,7 @@ struct SettingsSheet: View {
 
 /// 設定の札1枚。復習の入口と同じ寸法にそろえてある
 struct SettingsCard: View {
-    enum Style { case plain, highlighted, on, off, destructive, disabled }
+    enum Style { case plain, highlighted, on, off, destructive, disabled, coffee }
 
     let title: String
     let detail: String
@@ -172,13 +201,18 @@ struct SettingsCard: View {
     private var accent: Color {
         switch style {
         case .destructive: Palette.miss
+        case .coffee: .orange
         case .on, .highlighted: Palette.gold
         default: .secondary
         }
     }
 
     private var background: Color {
-        style == .highlighted ? Palette.gold.opacity(0.18) : Palette.panel
+        switch style {
+        case .highlighted: Palette.gold.opacity(0.18)
+        case .coffee: Color.orange.opacity(0.16)
+        default: Palette.panel
+        }
     }
 }
 
@@ -187,6 +221,9 @@ struct SettingsCard: View {
 struct AboutView: View {
     @Bindable var game: GameModel
     @Bindable var tipJar: TipJar
+    /// 記録を消す。確認は設定の側で出す
+    var onReset: () -> Void = {}
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         Form {
@@ -206,12 +243,19 @@ struct AboutView: View {
             } header: {
                 Text("記録")
             }
+            Section {
+                Button("記録をすべて消す", role: .destructive) {
+                    dismiss()
+                    onReset()
+                }
+            } footer: {
+                Text("消すと称号も最初からになります。元に戻せません。")
+            }
             FeedbackSection()
-            CoffeeTipSection(tipJar: tipJar)
         }
         .frame(maxWidth: 640)
         .frame(maxWidth: .infinity)
-        .navigationTitle("このアプリについて")
+        .navigationTitle("その他")
         .navigationBarTitleDisplayMode(.inline)
     }
 }
