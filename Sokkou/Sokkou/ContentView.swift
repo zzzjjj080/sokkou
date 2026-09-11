@@ -6,6 +6,7 @@ struct ContentView: View {
     @Bindable var game: GameModel
     @State private var showsDetail = false
     @State private var showsSettings = false
+    @State private var showsReview = false
     /// 局終わりから直接始めた練習
     @State private var practice: ReviewSession?
 
@@ -45,6 +46,17 @@ struct ContentView: View {
             }
         }
         .sheet(isPresented: $showsSettings) { SettingsSheet(game: game) }
+        // 上段からの復習。形を選んでから始められる
+        .sheet(isPresented: $showsReview) {
+            NavigationStack {
+                ReviewStartView(game: game)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("閉じる") { showsReview = false }
+                        }
+                    }
+            }
+        }
         // 局終わりからの練習。設定を経由せず、その形だけをすぐ解ける
         .sheet(item: $practice) { session in
             NavigationStack { ReviewView(game: game, session: session) }
@@ -70,9 +82,20 @@ struct ContentView: View {
                 .frame(maxWidth: 340)
             stat("連続", "\(game.records.currentStreak)")
             stat("最高連続", "\(game.records.bestStreak)")
-            Text("\(game.turn)巡目")
-                .font(.system(size: 19, weight: .heavy))
-                .foregroundStyle(Palette.gold)
+            // 巡目は結果の画面に出るので、上段からは外した。
+            // 空いたところに復習の入口を置く。設定の奥だと開かないため
+            if !game.reviewStore.isEmpty {
+                Button { showsReview = true } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: "arrow.trianglehead.counterclockwise")
+                            .font(.system(size: 18, weight: .bold))
+                        Text("\(game.reviewStore.count)")
+                            .font(.system(size: 17, weight: .heavy)).monospacedDigit()
+                    }
+                }
+                .buttonStyle(.plain).foregroundStyle(Palette.gold)
+                .accessibilityIdentifier("review-top")
+            }
             Button { showsSettings = true } label: {
                 Image(systemName: "gearshape.fill").font(.system(size: 22))
             }

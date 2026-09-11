@@ -177,6 +177,20 @@ final class NewFeatureChecks: XCTestCase {
         XCTAssertTrue(element("review-link", in: app).waitForExistence(timeout: 10),
                       "外した局面が復習に入ること")
 
+        // 上段からも復習へ入れること。設定の奥だけだと開かない
+        app.buttons["閉じる"].firstMatch.tap()
+        let top = element("review-top", in: app)
+        if top.waitForExistence(timeout: 5) {
+            top.tap()
+            XCTAssertTrue(element("review-all", in: app).waitForExistence(timeout: 10),
+                          "上段のボタンから復習の入口が開くこと")
+            save("05c-review-from-top")
+            app.buttons["閉じる"].firstMatch.tap()
+        } else {
+            XCTFail("上段に復習のボタンが出ること")
+        }
+        openSettings(app)
+
         // 形で絞れること。外した局面には必ず分類が付く
         element("review-link", in: app).tap()
         let all = element("review-all", in: app)
@@ -290,20 +304,24 @@ final class NewFeatureChecks: XCTestCase {
         skipIntroduction(app)
 
         // 聴牌するまで打っては引くを繰り返す。1シャンテン配牌なので普通は1巡だが、
-        // 引いた牌によっては伸びないことがあるので数巡ぶん粘る
+        // 引いた牌や描き直しの間合いで伸びることがあるので長めに粘る。
+        // 途中で牌が掴めない瞬間があっても、抜けずに次の周回で取り直す
         let practice = element("practice-weak", in: app)
-        for _ in 0..<8 {
+        for _ in 0..<20 {
             if practice.exists { break }
-            // 最善が分からなければ手牌の先頭でよい。進めることが目的
-            let best = app.otherElements.matching(identifier: "tile-best")
-                .allElementsBoundByIndex.first { $0.exists && $0.isHittable }
-            let any = app.otherElements
-                .matching(NSPredicate(format: "identifier BEGINSWITH %@", "tile-"))
-                .allElementsBoundByIndex.first { $0.exists && $0.isHittable }
-            guard let tile = best ?? any else { break }
+            func hittable(_ query: XCUIElementQuery) -> XCUIElement? {
+                query.allElementsBoundByIndex.first { $0.exists && $0.isHittable }
+            }
+            let tile = hittable(app.otherElements.matching(identifier: "tile-best"))
+                ?? hittable(app.otherElements
+                    .matching(NSPredicate(format: "identifier BEGINSWITH %@", "tile-")))
+            guard let tile else { _ = practice.waitForExistence(timeout: 2); continue }
             tile.tap()
             let draw = element("draw", in: app)
-            if draw.waitForExistence(timeout: 10) { draw.tap() }
+            guard draw.waitForExistence(timeout: 10) else { continue }
+            // 押せるようになるまで少し待つ（打牌の判定が出るまで無効）
+            for _ in 0..<10 where !draw.isEnabled { _ = practice.waitForExistence(timeout: 1) }
+            if draw.isEnabled { draw.tap() }
         }
 
         XCTAssertTrue(practice.waitForExistence(timeout: 20),
