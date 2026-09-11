@@ -119,6 +119,20 @@ final class GameModel {
         }
         // 「苦手な形を練習」のボタンが出る状態を作る。
         // 同じ形で閾値ぶん外していないと勧めないので、まとめて入れる
+        // 並びの確認用に、いろいろな形をまとめて入れる
+        if arguments.contains("-SOKKOU_SEED_SHAPES") {
+            // 局面の id は14枚だけで決まるので、**2か所ずらして**別物にする
+            var offset = 0
+            for (tag, many) in zip(WeaknessTag.displayOrder, [7, 5, 4, 3, 2, 1]) {
+                for _ in 0..<many {
+                    reviewStore.record(
+                        ReviewPosition(hand: [0, 1, 5, 5, 7, 8, 10, 11, 12,
+                                              18, 19 + offset % 6, 21, 22 + offset / 6 % 5],
+                                       drawn: 25, chosen: 0, tag: tag))
+                    offset += 1
+                }
+            }
+        }
         if arguments.contains("-SOKKOU_SEED_WEAK") {
             // 局面の id は14枚だけで決まるので、**手牌を1枚ずつずらす**。
             // 同じ14枚を並べても1件に潰れてしまう
