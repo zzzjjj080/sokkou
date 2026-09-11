@@ -168,7 +168,7 @@ struct ContentView: View {
             // 詳細を開かなくても「なぜ劣るのか」が分かるように、理由を1行
             if let why = explanation {
                 Text(why)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 17, weight: .semibold))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)

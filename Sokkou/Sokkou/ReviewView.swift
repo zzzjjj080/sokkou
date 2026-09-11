@@ -82,7 +82,7 @@ struct ReviewView: View {
                     if let chosen = session.chosen, let evaluation = session.evaluation,
                        let why = Explanation.oneLiner(chosen: chosen, in: evaluation) {
                         Text(why)
-                            .font(.system(size: 14, weight: .semibold))
+                            .font(.system(size: 17, weight: .semibold))
                             .foregroundStyle(.secondary)
                             .lineLimit(1).minimumScaleFactor(0.75)
                             .accessibilityIdentifier("explanation")

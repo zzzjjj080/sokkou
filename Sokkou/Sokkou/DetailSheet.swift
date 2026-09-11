@@ -20,13 +20,14 @@ struct DetailSheet: View {
                     if let mine = chosenOption, let best = bestOption, mine.tile != best.tile {
                         comparison(mine: mine, best: best)
                         Text(reason(mine: mine, best: best))
-                            .font(.system(size: 14))
+                            .font(.system(size: 19))
+                            .lineSpacing(4)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     table
                 }
                 .padding(18)
-                .frame(maxWidth: 760)
+                .frame(maxWidth: 860)
                 .frame(maxWidth: .infinity)
             }
             .navigationTitle("採点の内訳")
@@ -63,21 +64,21 @@ struct DetailSheet: View {
                      isHeader: Bool = false, mineWins: Bool = false, bestWins: Bool = false) -> some View {
         HStack {
             Text(label)
-                .font(.system(size: 12))
+                .font(.system(size: 15))
                 .foregroundStyle(.secondary)
-                .frame(width: 130, alignment: .leading)
+                .frame(width: 170, alignment: .leading)
             Text(mine)
-                .font(.system(size: isHeader ? 12 : 14, weight: mineWins ? .heavy : .regular))
+                .font(.system(size: isHeader ? 16 : 21, weight: mineWins ? .heavy : .regular))
                 .foregroundStyle(isHeader ? Palette.heading
                                  : (mineWins ? .green : (bestWins ? .red : .primary)))
                 .frame(maxWidth: .infinity)
             Text(best)
-                .font(.system(size: isHeader ? 12 : 14, weight: bestWins ? .heavy : .regular))
+                .font(.system(size: isHeader ? 16 : 21, weight: bestWins ? .heavy : .regular))
                 .foregroundStyle(isHeader ? Palette.gold
                                  : (bestWins ? .green : (mineWins ? .red : .primary)))
                 .frame(maxWidth: .infinity)
         }
-        .padding(.horizontal, 10).padding(.vertical, 7)
+        .padding(.horizontal, 14).padding(.vertical, 10)
         .overlay(alignment: .top) {
             if !isHeader { Divider().opacity(0.25) }
         }
@@ -112,28 +113,28 @@ struct DetailSheet: View {
     private var table: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text("すべての打牌")
-                .font(.system(size: 12, weight: .bold))
+                .font(.system(size: 16, weight: .bold))
                 .foregroundStyle(.secondary)
-                .padding(.bottom, 6)
+                .padding(.bottom, 8)
             ForEach(Array(evaluation.options.enumerated()), id: \.offset) { _, option in
                 HStack {
                     Text(option.tile.description)
-                        .font(.system(size: 14, weight: .bold))
-                        .frame(width: 44, alignment: .leading)
+                        .font(.system(size: 20, weight: .bold))
+                        .frame(width: 58, alignment: .leading)
                     Text(option.score.map { "\($0)点" } ?? "—")
-                        .font(.system(size: 14, weight: .bold)).monospacedDigit()
-                        .frame(width: 56, alignment: .trailing)
+                        .font(.system(size: 20, weight: .bold)).monospacedDigit()
+                        .frame(width: 76, alignment: .trailing)
                         .foregroundStyle(scoreColor(option))
                     Text(shantenLabel(option.shanten))
-                        .font(.system(size: 12)).frame(width: 60, alignment: .trailing)
+                        .font(.system(size: 16)).frame(width: 76, alignment: .trailing)
                         .foregroundStyle(.secondary)
                     Text("\(option.ukeireKinds)種\(option.ukeireCount)枚")
-                        .font(.system(size: 12)).frame(width: 84, alignment: .trailing)
+                        .font(.system(size: 16)).frame(width: 108, alignment: .trailing)
                         .foregroundStyle(.secondary)
                     Spacer()
-                    Text(mark(option)).font(.system(size: 11)).foregroundStyle(.secondary)
+                    Text(mark(option)).font(.system(size: 15)).foregroundStyle(.secondary)
                 }
-                .padding(.vertical, 4)
+                .padding(.vertical, 7)
                 Divider().opacity(0.2)
             }
         }

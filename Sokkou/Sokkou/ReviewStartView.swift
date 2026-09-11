@@ -29,7 +29,7 @@ struct ReviewStartView: View {
             Text("切った牌と最善の牌が、手牌の中でどんな役割だったかで分けています。"
                  + "多い形が、いま練習すべきところです。"
                  + "復習で正解できた局面は一覧から外れます（最大\(ReviewStore.capacity)件）。")
-                .font(.system(size: 11))
+                .font(.system(size: 14))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
