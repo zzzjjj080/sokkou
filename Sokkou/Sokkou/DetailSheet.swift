@@ -19,6 +19,7 @@ struct DetailSheet: View {
                 VStack(alignment: .leading, spacing: 16) {
                     if let mine = chosenOption, let best = bestOption, mine.tile != best.tile {
                         comparison(mine: mine, best: best)
+                        ukeireFaces(mine: mine, best: best)
                         Text(reason(mine: mine, best: best))
                             .font(.system(size: 19))
                             .lineSpacing(4)
@@ -58,6 +59,61 @@ struct DetailSheet: View {
                 mineWins: false, bestWins: true)
         }
         .background(Palette.faintFill, in: RoundedRectangle(cornerRadius: 10))
+    }
+
+    // MARK: - 受け入れの牌
+
+    /// **何枚あるかより、どの牌かのほうが頭に残る。**
+    /// 数字だけ並べても、次に同じ形が来たときに思い出せない。
+    /// 枚数の多い順に3種まで、絵柄のまま並べる
+    private func ukeireFaces(mine: DiscardOption, best: DiscardOption) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("何を引けば進むか")
+                .font(.system(size: 16, weight: .bold))
+                .foregroundStyle(.secondary)
+            faceRow("あなた: \(mine.tile)切り", mine, tint: Palette.chosen)
+            faceRow("最善: \(best.tile)切り", best, tint: Palette.gold)
+        }
+        .padding(.horizontal, 14).padding(.vertical, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Palette.faintFill, in: RoundedRectangle(cornerRadius: 10))
+    }
+
+    private static let faceLimit = 3
+
+    private func faceRow(_ label: String, _ option: DiscardOption, tint: Color) -> some View {
+        // 枚数が多い順。同じ枚数なら牌の順で並べて、毎回同じ見た目にする
+        let sorted = option.ukeire.sorted {
+            $0.count != $1.count ? $0.count > $1.count : $0.tile < $1.tile
+        }
+        let shown = sorted.prefix(Self.faceLimit)
+        let rest = sorted.count - shown.count
+        return HStack(alignment: .center, spacing: 10) {
+            Text(label)
+                .font(.system(size: 15, weight: .bold))
+                .foregroundStyle(tint)
+                .frame(width: 130, alignment: .leading)
+            if shown.isEmpty {
+                Text("なし").font(.system(size: 15)).foregroundStyle(.secondary)
+            } else {
+                ForEach(Array(shown.enumerated()), id: \.offset) { _, item in
+                    HStack(spacing: 4) {
+                        TileView(tile: item.tile).frame(height: 46)
+                        Text("\(item.count)枚")
+                            .font(.system(size: 14, weight: .bold)).monospacedDigit()
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                if rest > 0 {
+                    Text("ほか\(rest)種")
+                        .font(.system(size: 14))
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Spacer(minLength: 0)
+            Text("計\(option.ukeireCount)枚")
+                .font(.system(size: 15, weight: .heavy)).monospacedDigit()
+        }
     }
 
     private func row(_ label: String, _ mine: String, _ best: String,

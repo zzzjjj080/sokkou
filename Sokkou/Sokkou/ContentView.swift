@@ -196,7 +196,10 @@ struct ContentView: View {
     /// 外したときだけ、**「ツモる」の反対側の空きに**詳細の抜粋を出す。
     ///
     /// 詳細を開かないと数字が見られないと、なぜ劣るのかが分からないまま次へ進む。
-    /// 押せば詳細がそのまま開く
+    /// 押せば詳細がそのまま開く。
+    ///
+    /// **出ていないときも同じ大きさの場所を空けておく。**
+    /// 高さが変わると、切った瞬間に手牌が上へずれる
     @ViewBuilder
     private var summary: some View {
         if let evaluation = game.evaluation, let chosen = game.chosen,
@@ -205,25 +208,42 @@ struct ContentView: View {
            let mine = evaluation.option(for: chosen),
            let best = evaluation.bestTiles.first.flatMap({ evaluation.option(for: $0) }) {
             Button { showsDetail = true } label: {
-                VStack(spacing: 3) {
-                    summaryRow("", "\(mine.tile)切り", "\(best.tile)切り", isHeader: true)
-                    summaryRow("向聴", shantenLabel(mine.shanten), shantenLabel(best.shanten))
-                    summaryRow("受け入れ", "\(mine.ukeireCount)枚", "\(best.ukeireCount)枚")
-                    summaryRow("伸びしろ", "\(mine.improvement)枚", "\(best.improvement)枚")
-                }
-                .padding(.horizontal, 12).padding(.vertical, 8)
-                .background(Palette.faintFill, in: RoundedRectangle(cornerRadius: 12))
-                .overlay(RoundedRectangle(cornerRadius: 12)
-                    .stroke(Palette.hairline, lineWidth: 1))
-                .fixedSize()
+                summaryPanel(head: ("\(mine.tile)切り", "\(best.tile)切り"),
+                             rows: [("向聴", shantenLabel(mine.shanten),
+                                     shantenLabel(best.shanten)),
+                                    ("受け入れ", "\(mine.ukeireCount)枚",
+                                     "\(best.ukeireCount)枚"),
+                                    ("伸びしろ", "\(mine.improvement)枚",
+                                     "\(best.improvement)枚")])
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("summary")
             .frame(maxWidth: .infinity,
                    alignment: game.isLeftHanded ? .trailing : .leading)
         } else {
-            Spacer(minLength: 0)
+            // 場所だけ取る。中身は見せない
+            summaryPanel(head: ("　", "　"),
+                         rows: [("向聴", "　", "　"), ("受け入れ", "　", "　"),
+                                ("伸びしろ", "　", "　")])
+                .opacity(0)
+                .accessibilityHidden(true)
+                .frame(maxWidth: .infinity,
+                       alignment: game.isLeftHanded ? .trailing : .leading)
         }
+    }
+
+    private func summaryPanel(head: (String, String),
+                              rows: [(String, String, String)]) -> some View {
+        VStack(spacing: 3) {
+            summaryRow("", head.0, head.1, isHeader: true)
+            ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+                summaryRow(row.0, row.1, row.2)
+            }
+        }
+        .padding(.horizontal, 12).padding(.vertical, 8)
+        .background(Palette.faintFill, in: RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Palette.hairline, lineWidth: 1))
+        .fixedSize()
     }
 
     private func summaryRow(_ label: String, _ mine: String, _ best: String,
