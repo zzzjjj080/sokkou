@@ -6,6 +6,8 @@ import SokkouCore
 struct DetailSheet: View {
     let evaluation: Evaluation
     let chosen: Tile
+    /// 切る前の14枚。**どんな局面だったかが見えないと、数字だけでは分からない**
+    let hand: TileCounts
     @Environment(\.dismiss) private var dismiss
 
     private var chosenOption: DiscardOption? { evaluation.option(for: chosen) }
@@ -17,13 +19,15 @@ struct DetailSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
+                    handStrip
                     if let mine = chosenOption, let best = bestOption, mine.tile != best.tile {
-                        comparison(mine: mine, best: best)
+                        // 主役はここ。何を引けば進むかの**違い**を見せる
                         ukeireFaces(mine: mine, best: best)
                         Text(reason(mine: mine, best: best))
                             .font(.system(size: 19))
                             .lineSpacing(4)
                             .fixedSize(horizontal: false, vertical: true)
+                        comparison(mine: mine, best: best)
                     }
                     table
                 }
@@ -61,58 +65,146 @@ struct DetailSheet: View {
         .background(Palette.faintFill, in: RoundedRectangle(cornerRadius: 10))
     }
 
-    // MARK: - 受け入れの牌
+    /// 点数の一覧に出す数。全部並べても読まないので上から3つ
+    private static let tableLimit = 3
 
-    /// **何枚あるかより、どの牌かのほうが頭に残る。**
-    /// 数字だけ並べても、次に同じ形が来たときに思い出せない。
-    /// 枚数の多い順に3種まで、絵柄のまま並べる
-    private func ukeireFaces(mine: DiscardOption, best: DiscardOption) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("何を引けば進むか")
+    // MARK: - 盤面
+
+    /// 切る前の14枚。**どの牌を切ったのか、最善はどれかを牌の上に示す。**
+    /// 数字の表だけでは、どんな局面だったのか思い出せない
+    private var handStrip: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("この14枚から")
                 .font(.system(size: 16, weight: .bold))
                 .foregroundStyle(.secondary)
-            faceRow("あなた: \(mine.tile)切り", mine, tint: Palette.chosen)
-            faceRow("最善: \(best.tile)切り", best, tint: Palette.gold)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 3) {
+                    ForEach(Array(hand.tiles.enumerated()), id: \.offset) { _, tile in
+                        VStack(spacing: 3) {
+                            Text(markLabel(for: tile))
+                                .font(.system(size: 11, weight: .heavy))
+                                .foregroundStyle(markColor(for: tile) ?? .clear)
+                            TileView(tile: tile)
+                                .frame(height: 52)
+                                .overlay(RoundedRectangle(cornerRadius: 5)
+                                    .stroke(markColor(for: tile) ?? .clear, lineWidth: 2.5))
+                        }
+                    }
+                }
+                .padding(.vertical, 2)
+            }
         }
         .padding(.horizontal, 14).padding(.vertical, 12)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Palette.faintFill, in: RoundedRectangle(cornerRadius: 10))
     }
 
-    private static let faceLimit = 3
+    private func markLabel(for tile: Tile) -> String {
+        if tile == chosen { return "あなた" }
+        if evaluation.isBest(tile) { return "最善" }
+        return " "
+    }
 
-    private func faceRow(_ label: String, _ option: DiscardOption, tint: Color) -> some View {
-        // 枚数が多い順。同じ枚数なら牌の順で並べて、毎回同じ見た目にする
-        let sorted = option.ukeire.sorted {
+    private func markColor(for tile: Tile) -> Color? {
+        if tile == chosen { return Palette.chosen }
+        if evaluation.isBest(tile) { return Palette.gold }
+        return nil
+    }
+
+    // MARK: - 受け入れの牌
+
+    /// **何枚あるかより、どの牌かのほうが頭に残る。**
+    ///
+    /// 両方が受けられる牌は、どちらを切っても変わらないので薄く小さく置く。
+    /// **片方だけが受けられる牌**に色を付けて、そこだけ見れば差が分かるようにする
+    private func ukeireFaces(mine: DiscardOption, best: DiscardOption) -> some View {
+        let mineKinds = Set(mine.ukeire.map(\.tile))
+        let bestKinds = Set(best.ukeire.map(\.tile))
+        let shared = mineKinds.intersection(bestKinds)
+        let onlyMine = mine.ukeire.filter { !shared.contains($0.tile) }
+        let onlyBest = best.ukeire.filter { !shared.contains($0.tile) }
+        let gap = best.ukeireCount - mine.ukeireCount
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Text("何を引けば進むか")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(.secondary)
+                Text(gap > 0 ? "最善のほうが \(gap)枚 広い"
+                     : (gap < 0 ? "受け入れは \(-gap)枚 あなたが広い" : "受け入れは同じ枚数"))
+                    .font(.system(size: 16, weight: .heavy))
+                    .foregroundStyle(gap > 0 ? Palette.green : .secondary)
+            }
+            faceRow("あなた: \(mine.tile)切り", only: onlyMine, tint: Palette.chosen,
+                    total: mine.ukeireCount)
+            faceRow("最善: \(best.tile)切り", only: onlyBest, tint: Palette.gold,
+                    total: best.ukeireCount)
+            if !shared.isEmpty {
+                sharedRow(mine.ukeire.filter { shared.contains($0.tile) })
+            }
+        }
+        .padding(.horizontal, 14).padding(.vertical, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Palette.faintFill, in: RoundedRectangle(cornerRadius: 10))
+    }
+
+    /// 片方だけが受けられる牌。**ここが差のすべて**なので色を付けて大きく出す
+    private func faceRow(_ label: String, only: [UkeireTile], tint: Color,
+                         total: Int) -> some View {
+        let sorted = only.sorted {
             $0.count != $1.count ? $0.count > $1.count : $0.tile < $1.tile
         }
-        let shown = sorted.prefix(Self.faceLimit)
-        let rest = sorted.count - shown.count
         return HStack(alignment: .center, spacing: 10) {
             Text(label)
                 .font(.system(size: 15, weight: .bold))
                 .foregroundStyle(tint)
-                .frame(width: 130, alignment: .leading)
-            if shown.isEmpty {
-                Text("なし").font(.system(size: 15)).foregroundStyle(.secondary)
+                .frame(width: 140, alignment: .leading)
+            if sorted.isEmpty {
+                Text("ここだけの牌はなし")
+                    .font(.system(size: 15)).foregroundStyle(.secondary)
             } else {
-                ForEach(Array(shown.enumerated()), id: \.offset) { _, item in
-                    HStack(spacing: 4) {
-                        TileView(tile: item.tile).frame(height: 46)
-                        Text("\(item.count)枚")
-                            .font(.system(size: 14, weight: .bold)).monospacedDigit()
-                            .foregroundStyle(.secondary)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(Array(sorted.enumerated()), id: \.offset) { _, item in
+                            HStack(spacing: 3) {
+                                TileView(tile: item.tile).frame(height: 48)
+                                    .overlay(RoundedRectangle(cornerRadius: 5)
+                                        .stroke(tint, lineWidth: 2))
+                                Text("\(item.count)")
+                                    .font(.system(size: 15, weight: .heavy)).monospacedDigit()
+                            }
+                        }
                     }
-                }
-                if rest > 0 {
-                    Text("ほか\(rest)種")
-                        .font(.system(size: 14))
-                        .foregroundStyle(.secondary)
+                    .padding(.vertical, 2)
                 }
             }
             Spacer(minLength: 0)
-            Text("計\(option.ukeireCount)枚")
+            Text("計\(total)枚")
                 .font(.system(size: 15, weight: .heavy)).monospacedDigit()
+        }
+    }
+
+    /// どちらを切っても受けられる牌。差には効かないので薄く小さく
+    private func sharedRow(_ items: [UkeireTile]) -> some View {
+        let sorted = items.sorted { $0.tile < $1.tile }
+        return HStack(alignment: .center, spacing: 10) {
+            Text("どちらも同じ")
+                .font(.system(size: 13))
+                .foregroundStyle(.secondary)
+                .frame(width: 140, alignment: .leading)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 5) {
+                    ForEach(Array(sorted.enumerated()), id: \.offset) { _, item in
+                        HStack(spacing: 2) {
+                            TileView(tile: item.tile).frame(height: 30)
+                            Text("\(item.count)")
+                                .font(.system(size: 12)).monospacedDigit()
+                        }
+                    }
+                }
+                .padding(.vertical, 2)
+            }
+            .opacity(0.45)
+            Spacer(minLength: 0)
         }
     }
 
@@ -168,11 +260,13 @@ struct DetailSheet: View {
 
     private var table: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("すべての打牌")
+            // 全部並べても読まない。**上から3つで足りる**
+            Text("点数の高い打牌")
                 .font(.system(size: 16, weight: .bold))
                 .foregroundStyle(.secondary)
                 .padding(.bottom, 8)
-            ForEach(Array(evaluation.options.enumerated()), id: \.offset) { _, option in
+            ForEach(Array(evaluation.options.prefix(Self.tableLimit).enumerated()),
+                    id: \.offset) { _, option in
                 HStack {
                     Text(option.tile.description)
                         .font(.system(size: 20, weight: .bold))

@@ -22,6 +22,9 @@ final class GameModel {
 
     private(set) var round: Round
     private(set) var evaluation: Evaluation?
+    /// 採点にかけた14枚。**切ると drawn が手牌に入って round.fourteen は nil になる**ので、
+    /// 判定のあとに局面を見せたいときはこちらを使う
+    private(set) var judgedHand: TileCounts?
     private(set) var phase: Phase = .choosing
     private(set) var chosen: Tile?
     private(set) var records: Records
@@ -193,6 +196,7 @@ final class GameModel {
         guard let fourteen = round.fourteen else { return }
         evaluator.trimCachesIfNeeded()
         evaluation = evaluator.evaluate(hand: fourteen)
+        judgedHand = fourteen
         chosen = nil
         phase = .choosing
     }

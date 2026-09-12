@@ -21,8 +21,9 @@ struct ReviewView: View {
             }
         }
         .sheet(isPresented: $showsDetail) {
-            if let evaluation = session.evaluation, let chosen = session.chosen {
-                DetailSheet(evaluation: evaluation, chosen: chosen)
+            if let evaluation = session.evaluation, let chosen = session.chosen,
+               let fourteen = session.current?.fourteen {
+                DetailSheet(evaluation: evaluation, chosen: chosen, hand: fourteen)
             }
         }
     }

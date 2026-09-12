@@ -246,8 +246,11 @@ final class NewFeatureChecks: XCTestCase {
         let detail = element("review-detail", in: app)
         XCTAssertTrue(detail.waitForExistence(timeout: 5), "復習にも詳細のボタンが出ること")
         detail.tap()
-        XCTAssertTrue(app.staticTexts["すべての打牌"].firstMatch.waitForExistence(timeout: 10),
-                      "詳細の中身が出ること")
+        // 盤面と、受け入れの違いが出ていること
+        XCTAssertTrue(app.staticTexts["この14枚から"].firstMatch.waitForExistence(timeout: 10),
+                      "詳細に盤面が出ること")
+        XCTAssertTrue(app.staticTexts["何を引けば進むか"].firstMatch.exists,
+                      "受け入れの比較が出ること")
         save("07b-review-detail")
         // 閉じて元の画面へ戻る
         app.swipeDown(velocity: .fast)

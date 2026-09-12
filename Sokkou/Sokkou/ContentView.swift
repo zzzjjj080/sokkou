@@ -45,8 +45,9 @@ struct ContentView: View {
             .padding(.vertical, 12)
         }
         .sheet(isPresented: $showsDetail) {
-            if let evaluation = game.evaluation, let chosen = game.chosen {
-                DetailSheet(evaluation: evaluation, chosen: chosen)
+            if let evaluation = game.evaluation, let chosen = game.chosen,
+               let fourteen = game.judgedHand {
+                DetailSheet(evaluation: evaluation, chosen: chosen, hand: fourteen)
             }
         }
         .sheet(isPresented: $showsSettings) { SettingsSheet(game: game) }
