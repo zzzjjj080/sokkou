@@ -29,12 +29,18 @@ final class StoreScreenshots: XCTestCase {
     /// 最善の牌を切る。見栄えのする局にするため、撮影ではノーミスで通す。
     @discardableResult
     private func discardBestTile(_ app: XCUIApplication) -> Bool {
-        // 採点が終わるまで最善の目印は出ない。出るまで待ってから叩く
-        let best = app.otherElements["tile-best"].firstMatch
-        if best.waitForExistence(timeout: 8), best.isHittable { best.tap(); return true }
-        for index in 0..<14 {
-            let tile = app.otherElements["tile-\(index)"].firstMatch
-            if tile.exists, tile.isHittable { tile.tap(); return true }
+        // 採点が終わるまで最善の目印は出ない。出るまで待ってから叩く。
+        // **同じ目印の要素が入れ子で複数出る**ので、押せるものを選ぶ
+        _ = app.otherElements["tile-best"].firstMatch.waitForExistence(timeout: 8)
+        for candidate in app.otherElements
+            .matching(identifier: "tile-best").allElementsBoundByIndex {
+            if candidate.exists, candidate.isHittable { candidate.tap(); return true }
+        }
+        // 最善が掴めなければ、どれでもよいので1枚切って先へ進める
+        for candidate in app.otherElements
+            .matching(NSPredicate(format: "identifier BEGINSWITH %@", "tile-"))
+            .allElementsBoundByIndex {
+            if candidate.exists, candidate.isHittable { candidate.tap(); return true }
         }
         return false
     }
@@ -55,7 +61,16 @@ final class StoreScreenshots: XCTestCase {
         sleep(1)
         save(app, "02-scored")
 
-        // 3. 採点の内訳
+        // 3. 採点の内訳。
+        //    **最善を切ったままだと「受け入れの違い」が出ない**（比べる相手がいない）。
+        //    やり直して、わざと最善でない牌を切ってから開く
+        app.buttons["やり直す"].firstMatch.tap()
+        sleep(2)
+        for candidate in app.otherElements
+            .matching(identifier: "tile-miss").allElementsBoundByIndex {
+            if candidate.exists, candidate.isHittable { candidate.tap(); break }
+        }
+        sleep(1)
         let detail = app.buttons["詳細"].firstMatch
         if detail.waitForExistence(timeout: 5), detail.isEnabled {
             detail.tap()
@@ -66,19 +81,31 @@ final class StoreScreenshots: XCTestCase {
         }
 
         // 4. 聴牌画面。経験値が入るところ
+        // 聴牌の画面は見出しで見分ける。ボタンの文字は状態で変わるので当てにしない
+        let result = app.staticTexts["この局の打牌"].firstMatch
         let next = app.buttons["次の局へ"].firstMatch
-        for _ in 0..<24 {
-            if next.exists { break }
-            let draw = app.buttons["ツモる"].firstMatch
-            if draw.exists, draw.isEnabled { draw.tap(); sleep(1) }
+        // 配牌が遠いと巡目がかさむ。聴牌まで十分に粘る
+        for _ in 0..<40 {
+            if result.exists { break }
+            // 「ツモる」は目印で拾う。文字は「次の局へ」に変わることがある
+            let draw = app.descendants(matching: .any)["draw"].firstMatch
+            if draw.exists {
+                for _ in 0..<6 where !draw.isEnabled { sleep(1) }
+                if draw.isEnabled { draw.tap(); sleep(1) }
+            }
             discardBestTile(app)
             sleep(1)
         }
-        if next.waitForExistence(timeout: 10) {
+        if !result.waitForExistence(timeout: 15) {
+            try? app.debugDescription.write(toFile: "/tmp/sokkou-shots/stuck.txt",
+                                            atomically: true, encoding: .utf8)
+            save(app, "99-stuck")
+        }
+        XCTAssertTrue(result.exists, "聴牌の画面まで進むこと")
+        if result.exists {
             sleep(3)                      // 経験値ゲージが伸びきるのを待つ
             save(app, "04-result")
-            next.tap()
-            sleep(2)
+            if next.exists { next.tap(); sleep(2) }
         }
 
     }
@@ -91,15 +118,21 @@ final class StoreScreenshots: XCTestCase {
         app.launch()
         XCTAssertTrue(app.wait(for: .runningForeground, timeout: 20))
         sleep(2)
+        // 記録が消えている端末では、遊び方が全画面で被る
+        let skip = app.buttons["intro-skip"].firstMatch
+        if skip.waitForExistence(timeout: 5) { skip.tap(); sleep(1) }
 
         let settings = app.descendants(matching: .any)["settings"].firstMatch
         XCTAssertTrue(settings.waitForExistence(timeout: 8), "設定ボタンが見つからない")
         settings.tap()
         sleep(2)
-        let ranks = app.buttons["段位一覧"].exists
-            ? app.buttons["段位一覧"].firstMatch
-            : app.cells.containing(.staticText, identifier: "段位一覧").firstMatch
-        XCTAssertTrue(ranks.waitForExistence(timeout: 8), "段位一覧が見つからない")
+        // 設定は札を並べる形になった。札の中の文字から押す
+        let ranks = app.staticTexts["段位一覧"].firstMatch
+        if !ranks.waitForExistence(timeout: 8) {
+            try? app.debugDescription.write(toFile: "/tmp/sokkou-shots/settings-dump.txt",
+                                            atomically: true, encoding: .utf8)
+        }
+        XCTAssertTrue(ranks.exists, "段位一覧が見つからない")
         ranks.tap()
         sleep(2)
         save(app, "05-ranks")
