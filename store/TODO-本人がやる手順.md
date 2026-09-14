@@ -17,7 +17,7 @@
 | 項目 | 状態 |
 |---|---|
 | Apple Developer Program | 登録済み（Team ID `A7WA598R44`） |
-| Xcodeへのアカウント追加 | 済み。署名証明書 `Apple Development: Jin Nakamura` をMac上で確認済み |
+| Xcodeへのアカウント追加 | 済み。署名証明書（`Apple Development: <自分の名前>`）をMac上で確認済み |
 | 実機のチーム登録 | iPhone Air 登録済み |
 
 ---
